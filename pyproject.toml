@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "holoviz-mcp-app"
+dynamic = ["version"]
+description = "MCP server for HoloViz ecosystem — interactive visualizations and dashboards rendered as MCP Apps in AI chat."
+readme = "README.md"
+license = "BSD-3-Clause"
+requires-python = ">=3.11"
+authors = [{ name = "Sumaiya" }]
+keywords = ["mcp", "holoviz", "panel", "hvplot", "holoviews", "visualization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "fastmcp>=3.0",
+    "panel>=1.5.0",
+    "holoviews>=1.18.0",
+    "hvplot>=0.10.0",
+    "bokeh>=3.4.0",
+    "pandas>=2.0",
+    "pydantic>=2.0",
+    "psutil",
+    "requests",
+    "typer",
+    "ruff",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pre-commit",
+    "mypy",
+]
+pydata = [
+    "numpy",
+    "scipy",
+    "polars",
+    "pyarrow",
+    "xarray",
+    "duckdb",
+    "matplotlib",
+    "plotly",
+    "altair",
+    "seaborn",
+    "datashader",
+    "colorcet",
+    "scikit-learn",
+]
+
+[project.scripts]
+hvmcp = "holoviz_mcp_app.cli:main"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.1.0"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/holoviz_mcp_app"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "S", "W", "RUF"]
+ignore = ["S101", "S603", "S607"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
