@@ -45,3 +45,7 @@ htmlcov/
 
 # User data
 ~/.holoviz-mcp-app/
+
+# Claude Code
+CLAUDE.md
+.claude/
