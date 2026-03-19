@@ -117,9 +117,11 @@ def _externalize_url(url: str) -> str:
 
 
 def _render_to_json_item(code: str, method: str) -> dict | None:
-    """Render visualization code to a Bokeh JSON spec for client-side embedding.
+    """Render pure HoloViews/hvPlot code to a Bokeh JSON spec for client-side embedding.
 
-    Returns a json_item dict or None if rendering fails.
+    Only works for HoloViews/hvPlot objects — Panel widgets with custom models
+    require the live Panel server URL instead (they cannot be serialized to pure Bokeh JSON).
+    Returns a json_item dict or None if not applicable / rendering fails.
     """
     try:
         import holoviews as hv
@@ -129,40 +131,35 @@ def _render_to_json_item(code: str, method: str) -> dict | None:
         from holoviz_mcp_app.display.utils import execute_in_module
         from holoviz_mcp_app.display.utils import extract_last_expression
 
+        if method != "jupyter":
+            # Panel .servable() code always uses Panel custom models — use server URL
+            return None
+
         preamble = "import panel as pn\npn.config.design = None\n\n"
         full_code = preamble + code
 
-        if method == "jupyter":
-            statements, last_expr = extract_last_expression(full_code)
-            namespace = execute_in_module(statements, module_name="html_render_module", cleanup=False)
-            if not last_expr:
-                return None
-            result = eval(last_expr, namespace)  # noqa: S307
-            if result is None:
-                return None
-            pane = pn.panel(result, sizing_mode="stretch_width")
-        else:
-            namespace = execute_in_module(full_code, module_name="html_render_module", cleanup=False)
-            pane = None
-            for obj in namespace.values():
-                if isinstance(obj, pn.viewable.Viewable):
-                    pane = obj
-                    break
-            if pane is None:
-                return None
+        statements, last_expr = extract_last_expression(full_code)
+        namespace = execute_in_module(statements, module_name="html_render_module", cleanup=False)
+        if not last_expr:
+            return None
+        result = eval(last_expr, namespace)  # noqa: S307
+        if result is None:
+            return None
 
-        # Convert to Bokeh figure and serialize as json_item
-        bokeh_obj = pane.get_root()
-        if bokeh_obj is None:
-            # Fallback: try rendering via HoloViews if the result is an HV object
-            obj = pane.object if hasattr(pane, "object") else pane
-            if hasattr(obj, "opts"):
-                bokeh_obj = hv.render(obj, backend="bokeh")
-            else:
-                return None
+        # Unwrap Panel HoloViews pane to get the underlying HV object
+        if isinstance(result, pn.pane.HoloViews):
+            result = result.object
 
-        bokeh_obj.sizing_mode = "stretch_width"
-        return json_item(bokeh_obj, "chart-container")
+        # Only serialize pure HoloViews/hvPlot objects — these produce clean Bokeh figures
+        # with no Panel custom models, so BokehJS can render them without Panel's JS bundles.
+        if not isinstance(result, hv.core.Dimensioned):
+            return None
+
+        hv.extension("bokeh")
+        bokeh_fig = hv.render(result, backend="bokeh")
+        bokeh_fig.sizing_mode = "stretch_width"
+        return json_item(bokeh_fig, "chart-container")
+
     except Exception as e:
         logger.debug(f"json_item rendering failed: {e}")
         return None
@@ -265,12 +262,18 @@ VIZ_RESOURCE_URI = "ui://holoviz-mcp-app/viz"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-app/stream"
 
 
-_RESOURCE_CSP = ResourceCSP(resource_domains=[
-    "https://cdn.bokeh.org",
-    "https://unpkg.com",
-    "https://*.basemaps.cartocdn.com",
-    "https://*.tile.openstreetmap.org",
-])
+_RESOURCE_CSP = ResourceCSP(
+    resource_domains=[
+        "https://cdn.bokeh.org",
+        "https://unpkg.com",
+        "https://*.basemaps.cartocdn.com",
+        "https://*.tile.openstreetmap.org",
+    ],
+    frame_domains=[
+        "http://127.0.0.1:5077",
+        "http://localhost:5077",
+    ],
+)
 
 
 @mcp.resource(VIZ_RESOURCE_URI, app=AppConfig(csp=_RESOURCE_CSP))
@@ -361,21 +364,26 @@ async def show(
         if error_message := response.get("error_message", None):
             raise ToolError(f"Visualization created but failed at runtime:\n{error_message}")
 
-        # Generate Bokeh JSON spec for client-side rendering in MCP App
+        # Try json_item for pure HoloViews/hvPlot (no Panel custom models needed)
         figure_spec = await asyncio.to_thread(_render_to_json_item, code, method)
 
-        result = {
-            "action": "create",
-            "figure": figure_spec,
-            "url": url,
-            "name": name or "Visualization",
-            "viz_id": response.get("id", ""),
-            "zoom": zoom,
-        }
-
-        if not figure_spec:
-            result["action"] = "error"
-            result["message"] = "Could not render chart — use the URL link instead."
+        if figure_spec:
+            # HoloViews/hvPlot chart — rendered client-side by BokehJS
+            result = {
+                "action": "create",
+                "figure": figure_spec,
+                "url": url,
+                "name": name or "Visualization",
+                "viz_id": response.get("id", ""),
+            }
+        else:
+            # Panel widget code — load live Panel server URL in iframe
+            result = {
+                "action": "panel_url",
+                "url": url,
+                "name": name or "Visualization",
+                "viz_id": response.get("id", ""),
+            }
 
         return json.dumps(result)
 

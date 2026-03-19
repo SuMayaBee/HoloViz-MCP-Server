@@ -129,37 +129,46 @@
       }
 
       const container = document.getElementById("chart-container");
+      const statusEl = document.getElementById("status");
+      const insightBar = document.getElementById("insight-bar");
 
       if (result.action === "create" && result.figure) {
+        // Pure HoloViews/hvPlot — render via BokehJS embed_item (no Panel custom models)
         currentVizId = result.viz_id || null;
         container.innerHTML = '<div class="loading"><div class="spinner"></div><span>Rendering chart...</span></div>';
         try {
           container.innerHTML = "";
           await Bokeh.embed.embed_item(result.figure);
-          document.getElementById("status").textContent = result.name || "Visualization created";
-          document.getElementById("insight-bar").style.display = "none";
+          statusEl.textContent = result.name || "Visualization created";
+          insightBar.style.display = "none";
         } catch (err) {
           container.innerHTML = '<div class="error-box">Render error: ' + err.message + '</div>';
-          document.getElementById("status").textContent = "Render error";
+          statusEl.textContent = "Render error";
         }
-      } else if (result.action === "error") {
-        const msg = result.message || "Unknown error";
-        if (result.url) {
-          container.innerHTML =
-            '<div style="padding:30px;text-align:center;font-size:14px;">' +
-            '<p style="margin-bottom:12px;">' + (result.name || "Visualization") + '</p>' +
-            '<a href="' + result.url + '" target="_blank" style="color:var(--accent);text-decoration:underline;">Open interactive visualization</a>' +
-            '</div>';
-        } else {
-          container.innerHTML = '<div class="error-box">' + msg + '</div>';
-        }
-        document.getElementById("status").textContent = result.name || "Error";
-      }
 
-      if (result.action === "insight" && result.message) {
-        const bar = document.getElementById("insight-bar");
-        bar.textContent = result.message;
-        bar.style.display = "block";
+      } else if (result.action === "panel_url" && result.url) {
+        // Panel widget code — load live Panel server in iframe
+        currentVizId = result.viz_id || null;
+        container.innerHTML = "";
+        const frame = document.createElement("iframe");
+        frame.src = result.url;
+        frame.style.cssText = "width:100%;height:500px;border:none;";
+        container.appendChild(frame);
+        statusEl.textContent = result.name || "Visualization loaded";
+        insightBar.style.display = "none";
+
+      } else if (result.action === "insight" && result.message) {
+        insightBar.textContent = result.message;
+        insightBar.style.display = "block";
+
+      } else if (result.url) {
+        // Fallback — show link
+        container.innerHTML =
+          '<div style="padding:30px;text-align:center;font-size:14px;">' +
+          '<p style="margin-bottom:12px;">' + (result.name || "Visualization") + '</p>' +
+          '<a href="' + result.url + '" target="_blank" style="color:var(--accent);text-decoration:underline;">Open interactive visualization</a>' +
+          '</div>';
+        statusEl.textContent = result.name || "Ready";
       }
     };
 
