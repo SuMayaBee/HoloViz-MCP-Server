@@ -35,13 +35,6 @@ from holoviz_mcp_app.display.validation import ruff_check
 
 logger = logging.getLogger(__name__)
 
-# Template paths
-SHOW_RESOURCE_URI = "ui://holoviz-mcp-app/show.html"
-DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-app/dashboard.html"
-STREAM_RESOURCE_URI = "ui://holoviz-mcp-app/stream.html"
-MULTI_RESOURCE_URI = "ui://holoviz-mcp-app/multi.html"
-TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
-
 # Global instances
 _manager: PanelServerManager | None = None
 _client: DisplayClient | None = None
@@ -121,6 +114,61 @@ def _externalize_url(url: str) -> str:
         query = f"?{parsed.query}" if parsed.query else ""
         return f"{parsed.scheme}://127.0.0.1{port_part}{path}{query}"
     return url
+
+
+def _render_to_json_item(code: str, method: str) -> dict | None:
+    """Render visualization code to a Bokeh JSON spec for client-side embedding.
+
+    Returns a json_item dict or None if rendering fails.
+    """
+    try:
+        import holoviews as hv
+        import panel as pn
+        from bokeh.embed import json_item
+
+        from holoviz_mcp_app.display.utils import execute_in_module
+        from holoviz_mcp_app.display.utils import extract_last_expression
+
+        preamble = "import panel as pn\npn.config.design = None\n\n"
+        full_code = preamble + code
+
+        if method == "jupyter":
+            statements, last_expr = extract_last_expression(full_code)
+            namespace = execute_in_module(statements, module_name="html_render_module", cleanup=False)
+            if not last_expr:
+                return None
+            result = eval(last_expr, namespace)  # noqa: S307
+            if result is None:
+                return None
+            pane = pn.panel(result, sizing_mode="stretch_width")
+        else:
+            namespace = execute_in_module(full_code, module_name="html_render_module", cleanup=False)
+            pane = None
+            for obj in namespace.values():
+                if isinstance(obj, pn.viewable.Viewable):
+                    pane = obj
+                    break
+            if pane is None:
+                return None
+
+        # Convert to Bokeh figure and serialize as json_item
+        bokeh_obj = pane.get_root()
+        if bokeh_obj is None:
+            # Fallback: try rendering via HoloViews if the result is an HV object
+            obj = pane.object if hasattr(pane, "object") else pane
+            if hasattr(obj, "opts"):
+                bokeh_obj = hv.render(obj, backend="bokeh")
+            else:
+                return None
+
+        bokeh_obj.sizing_mode = "stretch_width"
+        return json_item(bokeh_obj, "chart-container")
+    except Exception as e:
+        logger.debug(f"json_item rendering failed: {e}")
+        return None
+    finally:
+        sys.modules.pop("html_render_module", None)
+
 
 
 def _start_panel_server() -> tuple[PanelServerManager | None, DisplayClient | None]:
@@ -210,88 +258,36 @@ mcp = FastMCP(
 )
 
 
-# --- Resources ---
+# --- MCP App Resources (templates for inline rendering in Claude Desktop) ---
 
-def _build_frame_domains() -> list[str]:
-    config = get_config()
-    port = config.port
-    domains = [
-        f"http://127.0.0.1:{port}",
-        f"http://localhost:{port}",
-        f"https://127.0.0.1:{port}",
-        f"https://localhost:{port}",
-    ]
-    external_url = config.external_url
-    if external_url:
-        parsed = urlparse(external_url)
-        if parsed.hostname:
-            origin = f"{parsed.scheme}://{parsed.hostname}"
-            if parsed.port:
-                origin += f":{parsed.port}"
-            if origin not in domains:
-                domains.append(origin)
-    return domains
+_TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
+VIZ_RESOURCE_URI = "ui://holoviz-mcp-app/viz"
+STREAM_RESOURCE_URI = "ui://holoviz-mcp-app/stream"
 
 
-@mcp.resource(
-    SHOW_RESOURCE_URI,
-    app=AppConfig(
-        csp=ResourceCSP(
-            resource_domains=["'unsafe-inline'", "https://unpkg.com"],
-            frame_domains=_build_frame_domains(),
-        )
-    ),
-)
-def show_view() -> str:
-    """Return the HTML resource used by the show MCP App."""
-    return (TEMPLATE_DIR / "show.html").read_text(encoding="utf-8")
+_RESOURCE_CSP = ResourceCSP(resource_domains=[
+    "https://cdn.bokeh.org",
+    "https://unpkg.com",
+    "https://*.basemaps.cartocdn.com",
+    "https://*.tile.openstreetmap.org",
+])
 
 
-@mcp.resource(
-    DASHBOARD_RESOURCE_URI,
-    app=AppConfig(
-        csp=ResourceCSP(
-            resource_domains=["'unsafe-inline'", "https://unpkg.com"],
-            frame_domains=_build_frame_domains(),
-        )
-    ),
-)
-def dashboard_view() -> str:
-    """Return the HTML resource used by the dashboard MCP App."""
-    return (TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
+@mcp.resource(VIZ_RESOURCE_URI, app=AppConfig(csp=_RESOURCE_CSP))
+def viz_app_resource() -> str:
+    """Serve the visualization template for MCP Apps rendering."""
+    return (_TEMPLATES_DIR / "show.html").read_text()
 
 
-@mcp.resource(
-    STREAM_RESOURCE_URI,
-    app=AppConfig(
-        csp=ResourceCSP(
-            resource_domains=["'unsafe-inline'", "https://unpkg.com"],
-            frame_domains=_build_frame_domains(),
-        )
-    ),
-)
-def stream_view() -> str:
-    """Return the HTML resource used by the stream MCP App."""
-    return (TEMPLATE_DIR / "stream.html").read_text(encoding="utf-8")
-
-
-@mcp.resource(
-    MULTI_RESOURCE_URI,
-    app=AppConfig(
-        csp=ResourceCSP(
-            resource_domains=["'unsafe-inline'", "https://unpkg.com"],
-            frame_domains=_build_frame_domains(),
-        )
-    ),
-)
-def multi_view() -> str:
-    """Return the HTML resource used by the multi-chart MCP App."""
-    return (TEMPLATE_DIR / "multi.html").read_text(encoding="utf-8")
+@mcp.resource(STREAM_RESOURCE_URI, app=AppConfig(csp=_RESOURCE_CSP))
+def stream_app_resource() -> str:
+    """Serve the stream template for MCP Apps rendering."""
+    return (_TEMPLATES_DIR / "stream.html").read_text()
 
 
 # --- Core Tools ---
 
-@mcp.tool(name="show", app=AppConfig(resource_uri=SHOW_RESOURCE_URI))
+@mcp.tool(name="show", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
 async def show(
     code: str,
     name: str = "",
@@ -362,23 +358,26 @@ async def show(
         )
         url = _externalize_url(response.get("url", ""))
 
-        payload: dict = {
-            "tool": "show",
-            "name": name,
-            "description": description,
-            "method": method,
-            "zoom": zoom,
-            "url": url,
-            "code": code,
-        }
-
         if error_message := response.get("error_message", None):
             raise ToolError(f"Visualization created but failed at runtime:\n{error_message}")
 
-        payload["status"] = "success"
-        payload["message"] = f"Visualization created successfully. View at: {url}"
-        payload["markdown"] = f"[Open visualization]({url})"
-        return json.dumps(payload)
+        # Generate Bokeh JSON spec for client-side rendering in MCP App
+        figure_spec = await asyncio.to_thread(_render_to_json_item, code, method)
+
+        result = {
+            "action": "create",
+            "figure": figure_spec,
+            "url": url,
+            "name": name or "Visualization",
+            "viz_id": response.get("id", ""),
+            "zoom": zoom,
+        }
+
+        if not figure_spec:
+            result["action"] = "error"
+            result["message"] = "Could not render chart — use the URL link instead."
+
+        return json.dumps(result)
 
     except (SecurityError, ValidationError):
         raise
@@ -428,10 +427,9 @@ async def stream(
         url = _externalize_url(response.get("url", ""))
 
         return json.dumps({
-            "tool": "stream",
-            "name": name,
             "url": url,
-            "status": "success",
+            "name": name or "Stream",
+            "viz_id": response.get("id", ""),
         })
 
     except Exception as e:
@@ -500,7 +498,7 @@ async def load_data(
         return json.dumps({"error": str(e), "source": source})
 
 
-@mcp.tool(name="handle_interaction")
+@mcp.tool(name="handle_interaction", app=AppConfig(resource_uri=VIZ_RESOURCE_URI, visibility=["app"]))
 async def handle_interaction(
     viz_id: str,
     x_value: str = "",
@@ -524,7 +522,8 @@ async def handle_interaction(
         Index of the clicked data point.
     """
     return json.dumps({
-        "insight": f"Point {point_index}: {x_value} = {y_value}",
+        "action": "insight",
+        "message": f"Point {point_index}: {x_value} = {y_value}",
         "viz_id": viz_id,
     })
 

@@ -12,14 +12,12 @@ from fastmcp.server.apps import AppConfig
 
 mcp = FastMCP("Guided Viz Tools")
 
-# Import resource URIs from main server
-SHOW_RESOURCE_URI = "ui://holoviz-mcp-app/show.html"
-DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-app/dashboard.html"
-STREAM_RESOURCE_URI = "ui://holoviz-mcp-app/stream.html"
-MULTI_RESOURCE_URI = "ui://holoviz-mcp-app/multi.html"
+# Resource URIs match those defined on the main server
+VIZ_RESOURCE_URI = "ui://holoviz-mcp-app/viz"
+STREAM_RESOURCE_URI = "ui://holoviz-mcp-app/stream"
 
 
-@mcp.tool(name="create", app=AppConfig(resource_uri=SHOW_RESOURCE_URI))
+@mcp.tool(name="create", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
 async def viz_create(
     kind: str,
     data: dict[str, list],
@@ -50,13 +48,15 @@ async def viz_create(
 
     code = generate_viz_code(kind=kind, data=data, x=x, y=y, title=title, color=color)
 
-    # Use the main server's show tool via import
     from holoviz_mcp_app.server.main import show
 
-    return await show(code=code, name=title, description=f"{kind} chart of {y} vs {x}", method="jupyter", quick=True, ctx=ctx)
+    return await show(
+        code=code, name=title, description=f"{kind} chart of {y} vs {x}",
+        method="jupyter", quick=True, ctx=ctx,
+    )
 
 
-@mcp.tool(name="dashboard", app=AppConfig(resource_uri=DASHBOARD_RESOURCE_URI))
+@mcp.tool(name="dashboard", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
 async def viz_dashboard(
     title: str,
     data: dict[str, list],
@@ -121,7 +121,7 @@ async def viz_stream(
     return await stream_tool(code=code, name=title, description=f"Live stream: {metric_name}", ctx=ctx)
 
 
-@mcp.tool(name="multi")
+@mcp.tool(name="multi", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
 async def viz_multi(
     title: str,
     data: dict[str, list],

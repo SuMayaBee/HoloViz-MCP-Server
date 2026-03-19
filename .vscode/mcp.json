@@ -2,7 +2,7 @@
   "servers": {
     "holoviz": {
       "type": "stdio",
-      "command": "/home/sumaiya/Desktop/HOLOViz MCP Learning/holoviz-mcp-app/.pixi/envs/default/bin/hvmcp",
+      "command": "/home/sumaiya/Desktop/Panel-mcp-live/.pixi/envs/default/bin/hvmcp",
       "args": ["mcp"]
     }
   }

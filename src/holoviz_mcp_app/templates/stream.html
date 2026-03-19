@@ -95,14 +95,20 @@
       let result;
       try { result = JSON.parse(textContent.text); } catch { return; }
 
-      if (result.url) {
+      if (result.static_html || result.url) {
         currentVizId = result.viz_id || null;
         const container = document.getElementById("stream-container");
         container.innerHTML = "";
 
         const frame = document.createElement("iframe");
         frame.id = "stream-frame";
-        frame.src = result.url;
+
+        if (result.static_html) {
+          frame.srcdoc = result.static_html;
+        } else {
+          frame.src = result.url;
+        }
+
         container.appendChild(frame);
 
         document.getElementById("status").textContent = result.name || "Stream active";

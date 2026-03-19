@@ -70,13 +70,19 @@
       let result;
       try { result = JSON.parse(textContent.text); } catch { return; }
 
-      if (result.url) {
+      if (result.static_html || result.url) {
         const container = document.getElementById("dashboard-container");
         container.innerHTML = "";
 
         const frame = document.createElement("iframe");
-        frame.src = result.url;
         frame.style.height = "80vh";
+
+        if (result.static_html) {
+          frame.srcdoc = result.static_html;
+        } else {
+          frame.src = result.url;
+        }
+
         container.appendChild(frame);
 
         document.getElementById("status").textContent = result.name || "Dashboard loaded";
