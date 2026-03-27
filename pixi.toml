@@ -1,5 +1,5 @@
 [workspace]
-name = "holoviz-mcp-app"
+name = "holoviz-mcp-server"
 version = "0.1.0"
 description = "MCP server for HoloViz ecosystem"
 channels = ["conda-forge"]
@@ -24,7 +24,7 @@ pydantic = ">=2.0"
 [tasks]
 postinstall = "pip install --no-build-isolation --no-deps -e . && pip install fastmcp"
 test = "pytest tests/ -v"
-test-coverage = "pytest tests/ -v --cov=holoviz_mcp_app --cov-report=term-missing"
+test-coverage = "pytest tests/ -v --cov=holoviz_mcp_server --cov-report=term-missing"
 lint = "ruff check src/ && ruff format --check src/"
 format = "ruff format src/ && ruff check --fix src/"
 

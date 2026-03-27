@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "holoviz-mcp-app"
+name = "holoviz-mcp-server"
 dynamic = ["version"]
 description = "MCP server for HoloViz ecosystem — interactive visualizations and dashboards rendered as MCP Apps in AI chat."
 readme = "README.md"
@@ -55,14 +55,14 @@ pydata = [
 ]
 
 [project.scripts]
-hvmcp = "holoviz_mcp_app.cli:main"
+hvmcp = "holoviz_mcp_server.cli:main"
 
 [tool.hatch.version]
 source = "vcs"
 fallback-version = "0.1.0"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/holoviz_mcp_app"]
+packages = ["src/holoviz_mcp_server"]
 
 [tool.ruff]
 line-length = 120

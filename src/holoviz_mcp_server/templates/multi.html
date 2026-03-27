@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light dark">
+  <title>HoloViz MCP App — Multi Chart</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --border: #334155;
+      --text: #e0e0e0; --text-muted: #94a3b8; --accent: #818cf8;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 0; }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .toolbar button {
+      background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
+    }
+    .toolbar button:hover { background: var(--border); color: var(--text); }
+    .toolbar .spacer { flex: 1; }
+    .toolbar .status { font-size: 11px; color: var(--text-muted); }
+
+    .chart-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 10px; padding: 10px;
+    }
+
+    .chart-grid iframe {
+      width: 100%; border: none; border-radius: 8px;
+      background: var(--surface); min-height: 350px;
+    }
+
+    .loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; min-height: 400px; color: var(--text-muted); font-size: 13px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="btn-theme">🌓 Theme</button>
+    <div class="spacer"></div>
+    <span id="chart-count" class="status">0 charts</span>
+    <span id="status" class="status">Connecting...</span>
+  </div>
+
+  <div id="chart-container" class="chart-grid">
+    <div class="loading">
+      <div class="spinner"></div>
+      <span>Preparing multi-chart view...</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps@1.3.1/dist/src/app-with-deps";
+
+    const app = new App({ name: "HoloViz Multi", version: "0.1.0" });
+
+    app.ontoolresult = async ({ content }) => {
+      const textContent = content?.find(c => c.type === "text");
+      if (!textContent) return;
+
+      let result;
+      try { result = JSON.parse(textContent.text); } catch { return; }
+
+      if (result.urls && Array.isArray(result.urls)) {
+        const container = document.getElementById("chart-container");
+        container.innerHTML = "";
+
+        result.urls.forEach(url => {
+          const frame = document.createElement("iframe");
+          frame.src = url;
+          frame.style.height = "350px";
+          container.appendChild(frame);
+        });
+
+        document.getElementById("chart-count").textContent = `${result.urls.length} charts`;
+        document.getElementById("status").textContent = result.name || "Charts loaded";
+      }
+
+      if (result.url) {
+        const container = document.getElementById("chart-container");
+        container.innerHTML = "";
+
+        const frame = document.createElement("iframe");
+        frame.src = result.url;
+        frame.style.height = "80vh";
+        frame.style.gridColumn = "1 / -1";
+        container.appendChild(frame);
+
+        document.getElementById("chart-count").textContent = "1 dashboard";
+        document.getElementById("status").textContent = result.name || "Multi-chart loaded";
+      }
+    };
+
+    await app.connect();
+    document.getElementById("status").textContent = "Connected — ready";
+  </script>
+</body>
+</html>

@@ -44,7 +44,7 @@ htmlcov/
 .ruff_cache/
 
 # User data
-~/.holoviz-mcp-app/
+~/.holoviz-mcp-server/
 
 # Claude Code
 CLAUDE.md

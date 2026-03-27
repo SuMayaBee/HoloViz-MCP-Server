@@ -1,33 +1,27 @@
-# AGENTS.md - HoloViz MCP App
+# AGENTS.md — HoloViz MCP Server
 
-A guide for AI coding agents to contribute to the HoloViz MCP App project.
+A guide for AI coding agents contributing to this project.
 
 ---
 
-## Repository Overview
+## Project Overview
 
-**Project**: HoloViz MCP App — MCP server for creating interactive HoloViz visualizations inside LLM chat
+**Name**: HoloViz MCP Server
+**Purpose**: MCP server that lets AI agents create interactive HoloViz visualizations rendered as live UIs inside LLM chat
 **Language**: Python 3.11+
-**Build System**: Pixi (conda-based) + Hatchling (PEP 517)
+**Build system**: Pixi (conda-based) + Hatchling (PEP 517)
 **Framework**: FastMCP 3.0+ (server composition via `mount()`)
-**Key Dependencies**: Panel, HoloViews, hvPlot, Bokeh, Pydantic, psutil, ruff
+**Key deps**: Panel, HoloViews, hvPlot, Bokeh, Pydantic, psutil, ruff
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Install Pixi
 curl -fsSL https://pixi.sh/install.sh | bash
-
-# 2. Install environment
-cd holoviz-mcp-app
+cd Panel-mcp-live
 pixi install
-
-# 3. Install in editable mode
 pixi run postinstall
-
-# 4. Verify
 hvmcp --help
 ```
 
@@ -35,144 +29,128 @@ hvmcp --help
 
 ## Architecture
 
-### Three Layers
+Three layers:
 
-1. **MCP Server Layer** (FastMCP) — tools AI agents call
-2. **Display Server Layer** (Panel subprocess) — renders visualizations
-3. **MCP App Resources** (HTML templates) — rich UIs in LLM chat iframes
+1. **MCP Server** (`server/`) — FastMCP tools that AI agents call
+2. **Display Server** (`display/`) — Panel subprocess that renders and serves visualizations
+3. **MCP App Templates** (`templates/`) — HTML files that render as iframes in LLM chat
 
 ### Module Structure
 
 ```
-src/holoviz_mcp_app/
-├── __init__.py          # Package init
-├── cli.py               # Typer CLI: serve, mcp, status
-├── config.py            # Pydantic config + env var detection
+src/holoviz_mcp_server/
+├── cli.py               # Typer CLI: hvmcp serve / mcp / status
+├── config.py            # Pydantic config + env var loading
+├── validation.py        # 5-layer validation pipeline (ast, ruff, packages, extensions, runtime)
+├── utils.py             # execute_in_module, find_extensions, validate_extension_availability
+│
+├── server/              # MCP server layer
+│   ├── main.py          # Main FastMCP server + core tools
+│   ├── compose.py       # Mounts sub-servers with namespaces
+│   ├── guided_mcp.py    # viz.* sub-server (create, dashboard, stream, multi, annotate, export)
+│   ├── panel_mcp.py     # pn.* sub-server (list, get, params, search)
+│   ├── hvplot_mcp.py    # hvplot.* sub-server (list, get)
+│   └── holoviews_mcp.py # hv.* sub-server (list, get)
+│
+├── codegen/             # Code generators (structured config → Python code)
+│   └── codegen.py       # generate_viz_code, generate_dashboard_code, generate_stream_code, generate_multi_chart_code
+│
+├── introspection/       # Pure Python discovery functions (no MCP dependency)
+│   ├── panel.py         # Panel component discovery (list_components, get_component, search_components)
+│   ├── holoviews.py     # HoloViews element discovery (list_elements, get_element)
+│   ├── hvplot.py        # hvPlot chart type discovery (list_plot_types, get_plot_type)
+│   └── skills.py        # Skill file loading (list_skills, get_skill)
 │
 ├── display/             # Panel subprocess system
-│   ├── app.py           # Panel server entry point
-│   ├── manager.py       # PanelServerManager lifecycle
-│   ├── client.py        # DisplayClient (HTTP to /api/snippet)
-│   ├── database.py      # SQLite + FTS5 persistence
-│   ├── endpoints.py     # Tornado handlers
-│   ├── validation.py    # 5-layer validation pipeline
-│   ├── utils.py         # execute_in_module, find_extensions
-│   └── pages/           # Web UI pages
-│       ├── view_page.py
-│       ├── feed_page.py
-│       ├── add_page.py
+│   ├── app.py           # Panel server entry point (run as subprocess via python app.py)
+│   ├── manager.py       # PanelServerManager: start/stop/restart/health-check subprocess
+│   ├── client.py        # DisplayClient: HTTP client (POST /api/snippet, GET /api/health)
+│   ├── database.py      # SQLite + FTS5: stores all snippets permanently
+│   ├── endpoints.py     # Tornado REST handlers for /api/snippet and /api/health
+│   └── pages/           # Panel web UI pages
+│       ├── view_page.py # Renders a single visualization by ID
+│       ├── feed_page.py # Live feed of all visualizations
+│       ├── add_page.py  # Manual snippet submission form
 │       └── admin_page.py
 │
-├── templates/           # MCP App HTML (iframes in LLM chat)
-│   ├── show.html        # Chart viewer + click events
-│   ├── dashboard.html   # Chart + stats + filters
-│   ├── stream.html      # Live streaming + play/pause
-│   └── multi.html       # Multi-chart grid
+├── templates/           # MCP App HTML (iframes rendered inline in LLM chat)
+│   ├── show.html        # Chart viewer — BokehJS embed or iframe + click-to-insight
+│   ├── stream.html      # Live streaming viewer with play/pause
+│   ├── dashboard.html   # Dashboard with stats + filters
+│   └── multi.html       # Multi-chart grid with linked selections
 │
-├── server/              # MCP server composition
-│   ├── main.py          # Main server + core tools
-│   ├── compose.py       # Mount all sub-servers
-│   ├── panel_mcp.py     # pn.* tools
-│   ├── hvplot_mcp.py    # hvplot.* tools
-│   └── holoviews_mcp.py # hv.* tools
-│
-├── guided/              # High-level tools (config → codegen → show)
-│   ├── server.py        # viz.* sub-server
-│   └── codegen.py       # Code generators per chart type
-│
-├── core/                # Pure Python business logic
-│   ├── pn.py            # Panel introspection
-│   ├── hvplot.py        # hvPlot discovery
-│   ├── hv.py            # HoloViews discovery
-│   └── skills.py        # Skill file loading
-│
-└── skills/              # Agent skill files (SKILL.md)
-    ├── panel/
-    ├── hvplot/
-    ├── holoviews/
-    ├── param/
-    └── data/
+└── skills/              # Agent skill guides (SKILL.md with YAML frontmatter)
+    ├── panel/SKILL.md
+    ├── hvplot/SKILL.md
+    ├── holoviews/SKILL.md
+    ├── param/SKILL.md
+    └── data/SKILL.md
 ```
 
 ### Server Composition
 
-The main server mounts four sub-servers with namespaces:
-
 ```python
-main_mcp.mount(guided_mcp, namespace="viz")       # viz.create, viz.dashboard, etc.
-main_mcp.mount(panel_mcp, namespace="pn")          # pn.list, pn.get, pn.params
-main_mcp.mount(hvplot_mcp, namespace="hvplot")      # hvplot.list, hvplot.get
-main_mcp.mount(holoviews_mcp, namespace="hv")       # hv.list, hv.get
+main_mcp.mount(guided_mcp,    namespace="viz")     # viz.create, viz.dashboard, viz.stream, viz.multi
+main_mcp.mount(panel_mcp,     namespace="pn")      # pn.list, pn.get, pn.params, pn.search
+main_mcp.mount(hvplot_mcp,    namespace="hvplot")  # hvplot.list, hvplot.get
+main_mcp.mount(holoviews_mcp, namespace="hv")      # hv.list, hv.get
 ```
 
-Core tools on main server: `show`, `stream`, `load_data`, `handle_interaction`, `validate`, `skill_list`, `skill_get`, `list_packages`.
+Core tools on main server: `show`, `stream`, `load_data`, `validate`, `handle_interaction`, `skill_list`, `skill_get`, `list_packages`.
 
 ### Data Flow
 
 ```
 LLM calls show(code)
-  → MCP server validates code (5-layer pipeline)
-  → DisplayClient POSTs to /api/snippet
-  → Panel subprocess executes code
-  → SQLite stores snippet with metadata
-  → URL returned to LLM
-  → MCP App HTML embeds Panel URL in iframe
-  → User clicks chart → JS calls app.callServerTool("handle_interaction")
-  → Server computes insight → returned to iframe
+  → 5-layer validation (syntax → security → packages → extensions → runtime)
+  → DisplayClient POSTs to Panel subprocess /api/snippet
+  → Panel executes code, stores in SQLite
+  → Returns URL or Bokeh JSON spec
+  → MCP App HTML renders chart (BokehJS embed or iframe)
+  → User clicks chart → postMessage("bokeh-tap")
+  → HTML calls app.callServerTool("handle_interaction", ...)
+  → Server returns insight → displayed in iframe
 ```
 
-### Validation Pipeline (5 layers)
+### Two Rendering Paths in show()
 
-1. **Syntax** — `ast.parse(code)`
-2. **Security** — ruff + blocked imports (subprocess, socket, ctypes, etc.)
-3. **Packages** — `importlib.util.find_spec()` for all imports
-4. **Extensions** — detect Panel extensions (plotly, vega, deckgl)
-5. **Runtime** — execute in isolated `types.ModuleType` namespace
+| Condition | Path | How |
+|-----------|------|-----|
+| `method="jupyter"` + pure HoloViews/hvPlot | Client-side BokehJS | Serialized to `json_item`, rendered by BokehJS in template |
+| `method="panel"` or Panel widgets | Server-side iframe | Panel subprocess URL embedded in `<iframe>` |
 
----
+### Validation Pipeline (validation.py)
 
-## Key Technical Decisions
-
-### MCP Apps (templates/)
-
-Every visualization tool returns an MCP App resource — an HTML file using `@modelcontextprotocol/ext-apps` SDK. The iframe communicates back to the server via `app.callServerTool()`.
-
-### Bidirectional Click Events
-
-Bokeh TapTool + CustomJS dispatches `bokeh-tap` events. The HTML template catches them and calls `app.callServerTool("handle_interaction", ...)`. The server computes insights and returns text.
-
-### Guided Tools vs show()
-
-`show(code)` runs arbitrary Python. `viz.create(kind, data, x, y)` is a convenience wrapper that calls `codegen.py` to generate Python, then delegates to `show`. Guided tools inherit validation, persistence, and web UI for free.
-
-### Display Server Startup
-
-`app_lifespan` (async context manager) eagerly starts the Panel subprocess, checks for stale processes, waits for `/api/health`, and registers cleanup on exit.
+1. **Syntax** — `ast.parse(code)` → `ast_check()`
+2. **Security** — blocked imports (subprocess, socket, ctypes, pickle, etc.) + ruff security rules → `ruff_check()`
+3. **Packages** — `importlib.util.find_spec()` for every import → `check_packages()`
+4. **Extensions** — detect Panel extensions requiring `pn.extension()` → `validate_extension_availability()`
+5. **Runtime** — execute in isolated `types.ModuleType` namespace → `validate_code()`
 
 ---
 
 ## Configuration
 
-Environment variables (prefix `HOLOVIZ_MCP_APP_`):
+Environment variables (prefix `HOLOVIZ_MCP_SERVER_`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HOLOVIZ_MCP_APP_PORT` | 5077 | Panel server port |
-| `HOLOVIZ_MCP_APP_HOST` | localhost | Panel server host |
-| `HOLOVIZ_MCP_APP_MAX_RESTARTS` | 3 | Max restart attempts |
-| `HOLOVIZ_MCP_APP_DB_PATH` | snippets.db | SQLite database path |
-| `HOLOVIZ_MCP_APP_EXTERNAL_URL` | (auto) | Public URL override |
-| `HOLOVIZ_MCP_APP_SKILLS_DIR` | (builtin) | Custom skills directory |
+| `PORT` | 5077 | Panel server port |
+| `HOST` | 127.0.0.1 | Panel server host |
+| `MAX_RESTARTS` | 3 | Max subprocess restart attempts |
+| `DB_PATH` | `~/.holoviz-mcp-server/snippets/snippets.db` | SQLite path |
+| `EXTERNAL_URL` | *(auto)* | Public URL override |
+| `SKILLS_DIR` | *(builtin)* | Custom skills directory |
 
-Auto-detection: JupyterHub (`JUPYTERHUB_SERVICE_PREFIX`) and Codespaces (`CODESPACE_NAME`).
+Auto-detects JupyterHub (`JUPYTERHUB_SERVICE_PREFIX`) and Codespaces (`CODESPACE_NAME`).
 
 ---
 
 ## CLI Commands
 
 ```bash
-hvmcp serve        # Start Panel display server
-hvmcp mcp          # Start MCP server (stdio transport)
+hvmcp serve        # Start Panel display server standalone
+hvmcp mcp          # Start MCP server (stdio) — also auto-starts Panel subprocess
 hvmcp status       # Check display server health
 ```
 
@@ -181,57 +159,51 @@ hvmcp status       # Check display server health
 ## Development Workflow
 
 ```bash
-# Run tests
-pixi run test
-
-# Lint
-pixi run lint
-
-# Format
-pixi run format
-
-# Install editable
-pixi run postinstall
+pixi run test            # pytest tests/ -v
+pixi run test-coverage   # pytest with --cov
+pixi run lint            # ruff check + format --check
+pixi run format          # ruff format + check --fix
+pixi run postinstall     # pip install -e . + fastmcp (run after structural changes)
 ```
 
-### Adding a New MCP Tool
-
-1. Choose the right sub-server or add to `server/main.py`
-2. Add tool with `@mcp.tool()` decorator
-3. Add tests
-4. If guided tool: add codegen function in `guided/codegen.py`
-
-### Adding a New Skill
-
-1. Create `skills/<name>/SKILL.md` with YAML frontmatter
-2. The skills system auto-discovers it at runtime
-
 ---
 
-## Code Quality
+## Code Style
 
-- **Type hints**: Required for all new code (Python 3.11+ syntax)
-- **Linting**: ruff (formatting + linting + isort)
+- **Type hints**: Required on all new code (Python 3.11+ syntax: `X | Y`, `list[X]`)
 - **Line length**: 120 characters
-- **Imports**: Single-line, alphabetical
+- **Imports**: Single-line, alphabetical (enforced by ruff isort)
+- **Linter**: ruff (replaces black + isort + flake8)
+- No docstrings, comments, or type annotations on code you didn't change
 
 ---
 
-## Dependencies
+## Adding a New Tool
 
-Core runtime:
-- `fastmcp>=3.0` — MCP server framework
-- `panel` — Web framework + display server
-- `holoviews` — Declarative visualization
-- `hvplot` — High-level plotting API
-- `bokeh` — Rendering backend
-- `pandas` — DataFrames
-- `pydantic` — Configuration models
-- `psutil` — Process management
-- `requests` — HTTP client
-- `typer` — CLI framework
-- `ruff` — Code validation
+1. Choose the right sub-server (or `server/main.py` for core tools)
+2. Add `@mcp.tool()` decorated async function
+3. For guided tools: add codegen function in `codegen/codegen.py` first, then call from `server/guided_mcp.py`
+4. Add tests in `tests/`
+
+## Adding a New Skill
+
+1. Create `skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`)
+2. Auto-discovered at runtime — no code changes needed
 
 ---
 
-**Last Updated**: 2026-03-18
+## Key Dependencies
+
+| Package | Role |
+|---------|------|
+| `fastmcp>=3.0` | MCP server framework + tool/resource decorators |
+| `panel` | Display server + web UI framework |
+| `holoviews` | Declarative visualization layer |
+| `hvplot` | High-level plotting API |
+| `bokeh` | Rendering backend + JS interactivity |
+| `pandas` | DataFrame support |
+| `pydantic>=2.0` | Config models |
+| `psutil` | Cross-platform process management |
+| `requests` | HTTP client (MCP → Panel subprocess) |
+| `typer` | CLI framework |
+| `ruff` | Code validation + formatting |
