@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "/home/sumaiya/Desktop/HoloViz-MCP-Server/.pixi/envs/default/bin/hvmcp",
+      "args": ["mcp"]
+    }
+  }
+}

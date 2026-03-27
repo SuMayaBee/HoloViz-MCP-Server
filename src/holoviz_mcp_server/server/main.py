@@ -41,6 +41,9 @@ _client: DisplayClient | None = None
 _validation_cache: dict[tuple[str, str], dict] = {}
 _fully_validated: set[tuple[str, str]] = set()
 
+# In-memory store for guided-tool visualizations (enables update/theme/annotate/export)
+_viz_store: dict[str, dict] = {}
+
 
 def _run_validation(code: str, method: str) -> dict:
     """Run static validation layers and cache the result."""
@@ -167,7 +170,6 @@ def _render_to_json_item(code: str, method: str) -> dict | None:
         sys.modules.pop("html_render_module", None)
 
 
-
 def _start_panel_server() -> tuple[PanelServerManager | None, DisplayClient | None]:
     """Start the Panel server subprocess and create a client."""
     config = get_config()
@@ -220,7 +222,7 @@ async def app_lifespan(app):
     if _manager:
         atexit.register(_cleanup)
         feed_url = _externalize_url(f"http://{_manager.host}:{_manager.port}/feed")
-        print(f"\n  HoloViz MCP App is running.\n  Feed: {feed_url}\n", file=sys.stderr, flush=True)  # noqa: T201
+        print(f"\n  HoloViz MCP App is running.\n  Feed: {feed_url}\n", file=sys.stderr, flush=True)
         logger.info(f"Panel server started — feed: {feed_url}")
     else:
         logger.warning("Panel server failed to start — show tool will not work")
@@ -260,6 +262,7 @@ mcp = FastMCP(
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v3"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
+DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 
 
 _RESOURCE_CSP = ResourceCSP(
@@ -288,7 +291,14 @@ def stream_app_resource() -> str:
     return (_TEMPLATES_DIR / "stream.html").read_text()
 
 
+@mcp.resource(DASHBOARD_RESOURCE_URI, app=AppConfig(csp=_RESOURCE_CSP))
+def dashboard_app_resource() -> str:
+    """Serve the dashboard template for MCP Apps rendering."""
+    return (_TEMPLATES_DIR / "dashboard.html").read_text()
+
+
 # --- Core Tools ---
+
 
 @mcp.tool(name="show", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
 async def show(
@@ -343,8 +353,13 @@ async def show(
             _raise_validation_error(validation)
 
     if not _client:
+        # Lazily try to connect if the server started after MCP server initialization
         config = get_config()
-        raise ToolError(f"Panel server not running. Ensure port {config.port} is available.")
+        _lazy_client = DisplayClient(base_url=f"http://{config.host}:{config.port}")
+        if _lazy_client.is_healthy():
+            _client = _lazy_client
+        else:
+            raise ToolError(f"Panel server not running. Ensure port {config.port} is available.")
 
     if not _client.is_healthy():
         if ctx:
@@ -357,7 +372,10 @@ async def show(
 
     try:
         response = _client.create_snippet(
-            code=code, name=name, description=description, method=method,
+            code=code,
+            name=name,
+            description=description,
+            method=method,
         )
         url = _externalize_url(response.get("url", ""))
 
@@ -430,15 +448,20 @@ async def stream(
 
     try:
         response = _client.create_snippet(
-            code=code, name=name, description=description, method="panel",
+            code=code,
+            name=name,
+            description=description,
+            method="panel",
         )
         url = _externalize_url(response.get("url", ""))
 
-        return json.dumps({
-            "url": url,
-            "name": name or "Stream",
-            "viz_id": response.get("id", ""),
-        })
+        return json.dumps(
+            {
+                "url": url,
+                "name": name or "Stream",
+                "viz_id": response.get("id", ""),
+            }
+        )
 
     except Exception as e:
         raise ToolError(f"Failed to create stream: {e!s}") from e
@@ -529,11 +552,13 @@ async def handle_interaction(
     point_index : int
         Index of the clicked data point.
     """
-    return json.dumps({
-        "action": "insight",
-        "message": f"Point {point_index}: {x_value} = {y_value}",
-        "viz_id": viz_id,
-    })
+    return json.dumps(
+        {
+            "action": "insight",
+            "message": f"Point {point_index}: {x_value} = {y_value}",
+            "viz_id": viz_id,
+        }
+    )
 
 
 @mcp.tool(name="validate")
@@ -600,7 +625,17 @@ async def list_packages(
     from importlib.metadata import distributions
 
     _CATEGORIES: dict[str, set[str]] = {
-        "visualization": {"bokeh", "holoviews", "hvplot", "matplotlib", "panel", "plotly", "seaborn", "altair", "datashader"},
+        "visualization": {
+            "bokeh",
+            "holoviews",
+            "hvplot",
+            "matplotlib",
+            "panel",
+            "plotly",
+            "seaborn",
+            "altair",
+            "datashader",
+        },
         "data": {"numpy", "pandas", "polars", "pyarrow", "scipy", "xarray", "duckdb"},
         "panel": {"panel", "param", "pyviz-comms"},
     }
@@ -625,3 +660,274 @@ async def list_packages(
         pkgs = [p for p in pkgs if query_lower in p.lower()]
 
     return pkgs
+
+
+@mcp.tool(name="update_viz", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
+async def update_viz(
+    viz_id: str,
+    kind: str | None = None,
+    title: str | None = None,
+    data: dict[str, list] | None = None,
+    x: str | None = None,
+    y: str | None = None,
+    color: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    """Update an existing visualization created by viz.create. Only provide fields to change.
+
+    Parameters
+    ----------
+    viz_id : str
+        ID returned in the original viz.create response.
+    kind : str
+        New chart type (bar, line, scatter, area, pie, histogram, box, violin, kde, step, heatmap, hexbin).
+    title : str
+        New chart title.
+    data : dict
+        Replacement data as {column_name: [values]}.
+    x : str
+        New x-axis column.
+    y : str
+        New y-axis column.
+    color : str
+        New color-grouping column. Pass empty string to remove.
+    """
+    import pandas as pd
+
+    from holoviz_mcp_server.chart_builders import rebuild_figure
+
+    if viz_id not in _viz_store:
+        return json.dumps(
+            {
+                "action": "error",
+                "message": f"Visualization '{viz_id}' not found. Only charts created by viz.create support update_viz.",
+            }
+        )
+
+    viz = _viz_store[viz_id]
+    if kind is not None:
+        viz["kind"] = kind
+    if title is not None:
+        viz["title"] = title
+    if data is not None:
+        viz["data"] = data
+    if x is not None:
+        viz["x"] = x
+    if y is not None:
+        viz["y"] = y
+    if color is not None:
+        viz["color"] = color if color != "" else None
+
+    cols = list(pd.DataFrame(viz["data"]).columns)
+    if viz["x"] not in cols:
+        return json.dumps({"action": "error", "message": f"Column '{viz['x']}' not found. Available: {cols}"})
+    if viz["y"] not in cols:
+        return json.dumps({"action": "error", "message": f"Column '{viz['y']}' not found. Available: {cols}"})
+
+    try:
+        spec = rebuild_figure(viz)
+        return json.dumps({"action": "update", "id": viz_id, "figure": spec})
+    except Exception as e:
+        return json.dumps({"action": "error", "message": str(e)})
+
+
+@mcp.tool(name="set_theme", app=AppConfig(resource_uri=VIZ_RESOURCE_URI, visibility=["app"]))
+async def set_theme(
+    viz_id: str,
+    theme: str = "dark",
+    ctx: Context | None = None,
+) -> str:
+    """Switch visualization between dark and light theme with proper Bokeh re-rendering.
+
+    Parameters
+    ----------
+    viz_id : str
+        ID of the visualization to re-theme.
+    theme : str
+        "dark" or "light".
+    """
+    from holoviz_mcp_server.chart_builders import rebuild_figure
+
+    if theme not in ("dark", "light"):
+        return json.dumps({"action": "error", "message": "Theme must be 'dark' or 'light'"})
+    if viz_id not in _viz_store:
+        return json.dumps({"action": "theme_change", "id": viz_id, "theme": theme})
+
+    viz = _viz_store[viz_id]
+    viz["theme"] = theme
+
+    try:
+        spec = rebuild_figure(viz)
+        return json.dumps({"action": "theme_change", "id": viz_id, "theme": theme, "figure": spec})
+    except Exception as e:
+        return json.dumps({"action": "error", "message": str(e)})
+
+
+@mcp.tool(name="annotate_viz", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
+async def annotate_viz(
+    viz_id: str,
+    annotation_type: str,
+    config: dict,
+    ctx: Context | None = None,
+) -> str:
+    """Add an annotation to an existing visualization (reference lines, bands, text, arrows).
+
+    Parameters
+    ----------
+    viz_id : str
+        ID of the visualization to annotate.
+    annotation_type : str
+        One of: hline, vline, text, band, arrow.
+    config : dict
+        hline: {y_value, color?, dash?, label?}
+        vline: {x_value, color?, dash?}
+        text:  {x, y, text, color?, font_size?}
+        band:  {lower, upper, color?, alpha?}
+        arrow: {x_start, y_start, x_end, y_end, color?}
+    """
+    from holoviz_mcp_server.chart_builders import ANNOTATION_TYPES
+    from holoviz_mcp_server.chart_builders import rebuild_figure
+
+    if annotation_type not in ANNOTATION_TYPES:
+        return json.dumps({"action": "error", "message": f"Unsupported annotation type. Use: {ANNOTATION_TYPES}"})
+    if viz_id not in _viz_store:
+        return json.dumps(
+            {
+                "action": "error",
+                "message": f"Viz '{viz_id}' not found. Only charts from viz.create support annotations.",
+            }
+        )
+
+    viz = _viz_store[viz_id]
+    viz.setdefault("annotations", []).append({"type": annotation_type, "config": config})
+
+    try:
+        spec = rebuild_figure(viz)
+        return json.dumps({"action": "update", "id": viz_id, "figure": spec})
+    except Exception as e:
+        return json.dumps({"action": "error", "message": str(e)})
+
+
+@mcp.tool(name="export_data", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
+async def export_data(
+    viz_id: str,
+    format: str = "csv",
+    ctx: Context | None = None,
+) -> str:
+    """Export the data behind a visualization as CSV or JSON.
+
+    Parameters
+    ----------
+    viz_id : str
+        ID of the visualization to export.
+    format : str
+        "csv" or "json".
+    """
+    import pandas as pd
+
+    if viz_id not in _viz_store:
+        return json.dumps(
+            {
+                "action": "error",
+                "message": f"Viz '{viz_id}' not found. Only charts from viz.create support data export.",
+            }
+        )
+
+    viz = _viz_store[viz_id]
+    if "data" not in viz:
+        return json.dumps({"action": "error", "message": "No data available for this visualization."})
+
+    df = pd.DataFrame(viz["data"])
+
+    if format == "csv":
+        data_str = df.to_csv(index=False)
+    elif format == "json":
+        data_str = df.to_json(orient="records", indent=2)
+    else:
+        return json.dumps({"action": "error", "message": "Format must be 'csv' or 'json'"})
+
+    safe_title = viz["title"].replace(" ", "_").lower()
+    return json.dumps(
+        {
+            "action": "export",
+            "id": viz_id,
+            "format": format,
+            "data": data_str,
+            "filename": f"{safe_title}.{format}",
+        }
+    )
+
+
+@mcp.tool(name="apply_filter", app=AppConfig(resource_uri=DASHBOARD_RESOURCE_URI, visibility=["app"]))
+async def apply_filter(
+    viz_id: str,
+    filters: dict,
+    ctx: Context | None = None,
+) -> str:
+    """Apply filters to a dashboard. Called by the dashboard UI widgets.
+
+    Parameters
+    ----------
+    viz_id : str
+        ID of the dashboard visualization.
+    filters : dict
+        {column: value} for categorical (use "__all__" to clear),
+        {column: [min, max]} for numeric range.
+    """
+    import pandas as pd
+
+    from holoviz_mcp_server.chart_builders import build_bokeh_figure
+
+    if viz_id not in _viz_store:
+        return json.dumps({"action": "error", "message": f"Dashboard '{viz_id}' not found."})
+
+    viz = _viz_store[viz_id]
+    df = pd.DataFrame(viz["data"])
+
+    for col, value in filters.items():
+        if col not in df.columns:
+            continue
+        if value == "__all__":
+            continue
+        if isinstance(value, str):
+            df = df[df[col] == value]
+        elif isinstance(value, list) and len(value) == 2:
+            df = df[(df[col] >= value[0]) & (df[col] <= value[1])]
+
+    if df.empty:
+        return json.dumps({
+            "action": "filter_result", "id": viz_id,
+            "empty": True, "message": "No data matches the current filters",
+        })
+
+    theme = viz.get("theme", "dark")
+    spec = build_bokeh_figure(
+        viz["kind"], df, viz["x"], viz["y"], viz["title"], viz.get("color"),
+        target_id=viz.get("target_id", "chart"), theme=theme,
+    )
+
+    y_series = pd.to_numeric(df[viz["y"]], errors="coerce").dropna()
+    stats = {
+        "count": int(y_series.count()),
+        "mean": round(float(y_series.mean()), 2),
+        "median": round(float(y_series.median()), 2),
+        "min": round(float(y_series.min()), 2),
+        "max": round(float(y_series.max()), 2),
+        "std": round(float(y_series.std()), 2) if len(y_series) > 1 else 0.0,
+        "sum": round(float(y_series.sum()), 2),
+    }
+
+    max_table_rows = 200
+    return json.dumps({
+        "action": "filter_result",
+        "id": viz_id,
+        "empty": False,
+        "figure": spec,
+        "stats": stats,
+        "table": {
+            "columns": list(df.columns),
+            "rows": df.head(max_table_rows).values.tolist(),
+            "total": len(df),
+        },
+        "filtered_rows": len(df),
+    })

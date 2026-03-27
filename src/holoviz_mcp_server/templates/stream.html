@@ -23,7 +23,6 @@
     }
     .toolbar button:hover { background: var(--border); color: var(--text); }
     .toolbar .spacer { flex: 1; }
-    .toolbar .status { font-size: 11px; color: var(--text-muted); }
 
     .live-badge {
       display: inline-flex; align-items: center; gap: 4px;
@@ -56,8 +55,6 @@
     <span class="live-badge"><span class="live-dot"></span> LIVE</span>
     <button id="btn-pause">⏸ Pause</button>
     <button id="btn-theme">🌓 Theme</button>
-    <div class="spacer"></div>
-    <span id="status" class="status">Connecting...</span>
   </div>
 
   <div id="stream-container">
@@ -111,12 +108,10 @@
 
         container.appendChild(frame);
 
-        document.getElementById("status").textContent = result.name || "Stream active";
       }
     };
 
     await app.connect();
-    document.getElementById("status").textContent = "Connected — ready for stream";
   </script>
 </body>
 </html>

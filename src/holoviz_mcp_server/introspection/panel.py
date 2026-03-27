@@ -51,11 +51,13 @@ def list_components(category: str | None = None) -> list[dict[str, str]]:
     for comp in sorted(components.values(), key=lambda c: c["name"]):
         if category and comp["category"] != category:
             continue
-        results.append({
-            "name": comp["name"],
-            "category": comp["category"],
-            "doc": comp["doc"],
-        })
+        results.append(
+            {
+                "name": comp["name"],
+                "category": comp["category"],
+                "doc": comp["doc"],
+            }
+        )
     return results
 
 
@@ -112,10 +114,7 @@ def search_components(query: str, limit: int = 10) -> list[dict]:
             scored.append((score, comp))
 
     scored.sort(key=lambda x: -x[0])
-    return [
-        {"name": c["name"], "category": c["category"], "doc": c["doc"], "score": s}
-        for s, c in scored[:limit]
-    ]
+    return [{"name": c["name"], "category": c["category"], "doc": c["doc"], "score": s} for s, c in scored[:limit]]
 
 
 def get_component_params(name: str) -> dict:

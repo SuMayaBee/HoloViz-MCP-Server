@@ -43,7 +43,7 @@ def create_view(snippet_id: str) -> pn.viewable.Viewable | None:
 
     except Exception as e:
         execution_time = (datetime.now(timezone.utc) - start_time).total_seconds()
-        error_msg = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+        error_msg = f"{type(e).__name__}: {e!s}\n{traceback.format_exc()}"
 
         get_db().update_snippet(
             snippet_id,

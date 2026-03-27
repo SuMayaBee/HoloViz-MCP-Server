@@ -22,9 +22,7 @@ class DisplayClient:
         except requests.RequestException:
             return False
 
-    def create_snippet(
-        self, code: str, name: str = "", description: str = "", method: str = "jupyter"
-    ) -> dict:
+    def create_snippet(self, code: str, name: str = "", description: str = "", method: str = "jupyter") -> dict:
         """Create a visualization snippet on the Display Server."""
         try:
             response = self.session.post(

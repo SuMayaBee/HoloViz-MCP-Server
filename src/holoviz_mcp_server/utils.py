@@ -117,8 +117,7 @@ def validate_extension_availability(code: str) -> None:
         missing_sorted = sorted(missing)
         missing_args = ", ".join(f"'{ext}'" for ext in missing_sorted)
         raise ExtensionError(
-            f"Required Panel extension(s) not loaded: {missing_args}. "
-            f"Add pn.extension({missing_args}) to your code."
+            f"Required Panel extension(s) not loaded: {missing_args}. Add pn.extension({missing_args}) to your code."
         )
 
 

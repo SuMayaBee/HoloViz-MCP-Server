@@ -50,7 +50,6 @@
     <button id="btn-theme">🌓 Theme</button>
     <div class="spacer"></div>
     <span id="chart-count" class="status">0 charts</span>
-    <span id="status" class="status">Connecting...</span>
   </div>
 
   <div id="chart-container" class="chart-grid">
@@ -84,7 +83,6 @@
         });
 
         document.getElementById("chart-count").textContent = `${result.urls.length} charts`;
-        document.getElementById("status").textContent = result.name || "Charts loaded";
       }
 
       if (result.url) {
@@ -98,12 +96,10 @@
         container.appendChild(frame);
 
         document.getElementById("chart-count").textContent = "1 dashboard";
-        document.getElementById("status").textContent = result.name || "Multi-chart loaded";
       }
     };
 
     await app.connect();
-    document.getElementById("status").textContent = "Connected — ready";
   </script>
 </body>
 </html>

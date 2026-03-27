@@ -78,7 +78,7 @@ def _extract_description(path: Path) -> str:
     for line in frontmatter.splitlines():
         stripped = line.strip()
         if stripped.startswith("description:"):
-            return stripped[len("description:"):].strip().strip("\"'")
+            return stripped[len("description:") :].strip().strip("\"'")
     return ""
 
 

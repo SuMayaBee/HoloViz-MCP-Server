@@ -37,7 +37,9 @@ def get_element(name: str, backend: str = "bokeh") -> str:
 
     element_cls = getattr(hv, name, None)
     if element_cls is None or not isinstance(element_cls, type) or not issubclass(element_cls, hv.Element):
-        available = [n for n in dir(hv) if isinstance(getattr(hv, n, None), type) and issubclass(getattr(hv, n), hv.Element)]
+        available = [
+            n for n in dir(hv) if isinstance(getattr(hv, n, None), type) and issubclass(getattr(hv, n), hv.Element)
+        ]
         raise ValueError(f"Element '{name}' not found. Available: {', '.join(sorted(available))}")
 
     doc = element_cls.__doc__ or f"No documentation for {name}"

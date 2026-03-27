@@ -2,59 +2,148 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="color-scheme" content="light dark">
-  <title>HoloViz MCP App — Dashboard</title>
+  <title>HoloViz Dashboard</title>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.9.0.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.9.0.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.9.0.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.9.0.min.js" crossorigin="anonymous"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
+    body.theme-dark {
       --bg: #0f172a; --surface: #1e293b; --border: #334155;
       --text: #e0e0e0; --text-muted: #94a3b8; --accent: #818cf8;
+      --btn-bg: #1e293b; --btn-border: #334155; --input-bg: #0f172a;
+      --card: rgba(30,41,59,0.6); --stat-val: #818cf8; --th-bg: #1e293b;
+      --accent-bg: rgba(99,102,241,0.08); --danger: #f87171;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 0; }
-
-    .toolbar {
-      display: flex; align-items: center; gap: 6px; padding: 6px 10px;
-      background: var(--surface); border-bottom: 1px solid var(--border);
+    body.theme-light {
+      --bg: #ffffff; --surface: #f1f5f9; --border: #e5e7eb;
+      --text: #1f2937; --text-muted: #9ca3af; --accent: #6366f1;
+      --btn-bg: #f9fafb; --btn-border: #d1d5db; --input-bg: #ffffff;
+      --card: rgba(255,255,255,0.9); --stat-val: #6366f1; --th-bg: #f3f4f6;
+      --accent-bg: rgba(99,102,241,0.06); --danger: #dc2626;
     }
-    .toolbar button {
-      background: transparent; color: var(--text-muted); border: 1px solid var(--border);
-      padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
-    }
-    .toolbar button:hover { background: var(--border); color: var(--text); }
-    .toolbar .spacer { flex: 1; }
-    .toolbar .status { font-size: 11px; color: var(--text-muted); }
-
-    .dashboard-grid {
-      display: grid; grid-template-columns: 1fr; gap: 10px; padding: 10px;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--text); padding: 12px;
     }
 
-    .dashboard-grid iframe {
-      width: 100%; border: none; border-radius: 8px;
-      background: var(--surface); min-height: 500px;
+    /* Header */
+    .dash-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
     }
+    .dash-title { font-size: 18px; font-weight: 600; }
+    .dash-toolbar { display: flex; gap: 6px; }
+    .toolbar-btn {
+      padding: 3px 10px; border-radius: 4px; border: 1px solid var(--btn-border);
+      background: var(--btn-bg); color: var(--text-muted); cursor: pointer; font-size: 11px;
+    }
+    .toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* Layout */
+    .dash-layout { display: flex; gap: 12px; }
+    .dash-main { flex: 1; min-width: 0; }
+
+    /* Filter sidebar */
+    .filter-sidebar {
+      width: 180px; flex-shrink: 0; background: var(--card);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; max-height: 520px; overflow-y: auto;
+    }
+    .filter-title {
+      font-size: 12px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .filter-group { margin-bottom: 12px; }
+    .filter-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .filter-select, .filter-range {
+      width: 100%; padding: 4px 8px; border-radius: 4px;
+      border: 1px solid var(--btn-border); background: var(--input-bg);
+      color: var(--text); font-size: 12px;
+    }
+    .range-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); }
+    .filter-btn {
+      width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--accent);
+      background: var(--accent-bg); color: var(--accent); cursor: pointer;
+      font-size: 12px; margin-top: 8px;
+    }
+    .filter-btn:hover { opacity: 0.8; }
+    .filter-btn.reset { border-color: var(--btn-border); background: var(--btn-bg); color: var(--text-muted); margin-top: 4px; }
+    .filter-status { font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; }
+
+    /* Cards */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .card-title {
+      font-size: 12px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 8px;
+    }
+    #chart { width: 100%; min-height: 280px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat-item { text-align: center; padding: 8px; background: var(--surface); border-radius: 6px; }
+    .stat-value { font-size: 18px; font-weight: 700; color: var(--stat-val); }
+    .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Table */
+    .table-wrap { max-height: 240px; overflow-y: auto; }
+    .table-count { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th {
+      position: sticky; top: 0; background: var(--th-bg);
+      padding: 6px 8px; text-align: left; color: var(--text-muted);
+      border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+    }
+    th:hover { color: var(--accent); }
+    td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: var(--accent-bg); }
+
+    /* Loading / error */
     .loading {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 10px; min-height: 400px; color: var(--text-muted); font-size: 13px;
+      gap: 10px; min-height: 200px; color: var(--text-muted); font-size: 13px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 28px; height: 28px; border: 3px solid var(--border);
       border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
     }
+    .error-box { padding: 24px; text-align: center; color: var(--danger); font-size: 13px; }
   </style>
 </head>
-<body>
-  <div class="toolbar">
-    <button id="btn-theme">🌓 Theme</button>
-    <div class="spacer"></div>
-    <span id="status" class="status">Connecting...</span>
+<body class="theme-dark">
+
+  <div class="dash-header">
+    <div class="dash-title" id="dash-title">Loading dashboard...</div>
+    <div class="dash-toolbar">
+      <button class="toolbar-btn" id="theme-btn" onclick="toggleTheme()">Light Mode</button>
+    </div>
   </div>
 
-  <div id="dashboard-container" class="dashboard-grid">
-    <div class="loading">
-      <div class="spinner"></div>
-      <span>Preparing dashboard...</span>
+  <div class="dash-layout">
+    <div class="dash-main">
+      <div class="grid">
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="card-title">Chart</div>
+          <div id="chart"><div class="loading"><div class="spinner"></div><span>Preparing chart...</span></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Statistics</div>
+          <div class="stats-grid" id="stats"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Data Table</div>
+          <div class="table-wrap" id="table"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-sidebar" id="filter-sidebar">
+      <div class="filter-title">Filters</div>
+      <div class="filter-status">Waiting for data...</div>
     </div>
   </div>
 
@@ -62,35 +151,229 @@
     import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps@1.3.1/dist/src/app-with-deps";
 
     const app = new App({ name: "HoloViz Dashboard", version: "0.1.0" });
+    let currentVizId = null;
+    let currentTheme = "dark";
+    let currentTableData = null;
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-    app.ontoolresult = async ({ content }) => {
-      const textContent = content?.find(c => c.type === "text");
-      if (!textContent) return;
-
-      let result;
-      try { result = JSON.parse(textContent.text); } catch { return; }
-
-      if (result.static_html || result.url) {
-        const container = document.getElementById("dashboard-container");
-        container.innerHTML = "";
-
-        const frame = document.createElement("iframe");
-        frame.style.height = "80vh";
-
-        if (result.static_html) {
-          frame.srcdoc = result.static_html;
-        } else {
-          frame.src = result.url;
+    // ── Bokeh cleanup (prevents ghost docs on re-embed) ───────────────────────
+    function clearChart(containerId) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (window.Bokeh && Bokeh.index) {
+        for (const [id, view] of [...Bokeh.index]) {
+          if (el.contains(view.el)) {
+            try { view.remove(); } catch {}
+            Bokeh.index.delete(id);
+          }
         }
+      }
+      el.innerHTML = "";
+    }
 
-        container.appendChild(frame);
+    // ── Theme ─────────────────────────────────────────────────────────────────
+    window.toggleTheme = async () => {
+      currentTheme = currentTheme === "dark" ? "light" : "dark";
+      document.body.className = "theme-" + currentTheme;
+      document.getElementById("theme-btn").textContent = currentTheme === "dark" ? "Light Mode" : "Dark Mode";
+      if (currentVizId) {
+        try {
+          const response = await app.callServerTool({ name: "set_theme", arguments: { viz_id: currentVizId, theme: currentTheme } });
+          const t = response?.content?.find(c => c.type === "text");
+          if (t) {
+            const r = JSON.parse(t.text);
+            if (r.action === "theme_change" && r.figure) {
+              clearChart("chart");
+              await Bokeh.embed.embed_item(r.figure);
+            }
+          }
+        } catch (err) { console.log("Theme switch:", err); }
+      }
+    };
 
-        document.getElementById("status").textContent = result.name || "Dashboard loaded";
+    // ── Filter sidebar builder ─────────────────────────────────────────────────
+    function buildFilterWidgets(config) {
+      const sidebar = document.getElementById("filter-sidebar");
+      sidebar.innerHTML = '<div class="filter-title">Filters</div>';
+      if (!config || config.length === 0) {
+        sidebar.innerHTML += '<div class="filter-status">No filterable columns</div>';
+        return;
+      }
+      config.forEach(w => {
+        const group = document.createElement("div");
+        group.className = "filter-group";
+        group.innerHTML = '<div class="filter-label">' + w.column + '</div>';
+        if (w.type === "select") {
+          let html = '<select class="filter-select" data-column="' + w.column + '">';
+          html += '<option value="__all__">All</option>';
+          w.options.forEach(opt => { html += '<option value="' + opt + '">' + opt + '</option>'; });
+          html += '</select>';
+          group.innerHTML += html;
+        } else if (w.type === "range") {
+          group.innerHTML +=
+            '<input type="range" class="filter-range" data-column="' + w.column + '" data-role="min"' +
+            ' min="' + w.min + '" max="' + w.max + '" step="' + w.step + '" value="' + w.min + '">' +
+            '<input type="range" class="filter-range" data-column="' + w.column + '" data-role="max"' +
+            ' min="' + w.min + '" max="' + w.max + '" step="' + w.step + '" value="' + w.max + '">' +
+            '<div class="range-labels">' +
+            '<span id="rmin-' + w.column + '">' + w.min + '</span>' +
+            '<span id="rmax-' + w.column + '">' + w.max + '</span></div>';
+        }
+        sidebar.appendChild(group);
+      });
+
+      const applyBtn = document.createElement("button");
+      applyBtn.className = "filter-btn";
+      applyBtn.textContent = "Apply Filters";
+      applyBtn.onclick = applyFilters;
+      sidebar.appendChild(applyBtn);
+
+      const resetBtn = document.createElement("button");
+      resetBtn.className = "filter-btn reset";
+      resetBtn.textContent = "Reset";
+      resetBtn.onclick = resetFilters;
+      sidebar.appendChild(resetBtn);
+
+      sidebar.innerHTML += '<div id="filter-status" class="filter-status"></div>';
+
+      sidebar.querySelectorAll(".filter-range").forEach(input => {
+        input.addEventListener("input", () => {
+          const col = input.dataset.column;
+          const role = input.dataset.role;
+          const el = document.getElementById("r" + role + "-" + col);
+          if (el) el.textContent = input.value;
+        });
+      });
+    }
+
+    // ── Apply filters ─────────────────────────────────────────────────────────
+    async function applyFilters() {
+      if (!currentVizId) return;
+      const filters = {};
+      document.querySelectorAll(".filter-select").forEach(sel => {
+        filters[sel.dataset.column] = sel.value;
+      });
+      const rangeByCol = {};
+      document.querySelectorAll(".filter-range").forEach(input => {
+        const col = input.dataset.column;
+        if (!rangeByCol[col]) rangeByCol[col] = {};
+        rangeByCol[col][input.dataset.role] = parseFloat(input.value);
+      });
+      for (const [col, range] of Object.entries(rangeByCol)) {
+        filters[col] = [range.min, range.max];
+      }
+
+      const statusEl = document.getElementById("filter-status");
+      if (statusEl) statusEl.textContent = "Filtering...";
+      clearChart("chart");
+      document.getElementById("chart").innerHTML = '<div class="loading"><div class="spinner"></div><span>Applying filters...</span></div>';
+
+      try {
+        const response = await app.callServerTool({ name: "apply_filter", arguments: { viz_id: currentVizId, filters } });
+        const t = response?.content?.find(c => c.type === "text");
+        if (!t) return;
+        const r = JSON.parse(t.text);
+        if (r.action === "filter_result") {
+          if (r.empty) {
+            document.getElementById("chart").innerHTML = '<div class="error-box">No data matches the current filters.</div>';
+            if (statusEl) statusEl.textContent = "0 rows";
+          } else {
+            clearChart("chart");
+            try { await Bokeh.embed.embed_item(r.figure); } catch (err) {
+              document.getElementById("chart").innerHTML = '<div class="error-box">Render error: ' + err.message + '</div>';
+            }
+            renderStats(r.stats);
+            renderTable(r.table);
+            if (statusEl) statusEl.textContent = r.filtered_rows.toLocaleString() + " rows";
+          }
+        } else if (r.action === "error") {
+          document.getElementById("chart").innerHTML = '<div class="error-box">' + r.message + '</div>';
+          if (statusEl) statusEl.textContent = "Error";
+        }
+      } catch (err) {
+        document.getElementById("chart").innerHTML = '<div class="error-box">Connection error</div>';
+        if (statusEl) statusEl.textContent = "Error";
+      }
+    }
+
+    function resetFilters() {
+      document.querySelectorAll(".filter-select").forEach(sel => { sel.value = "__all__"; });
+      document.querySelectorAll(".filter-range").forEach(input => {
+        input.value = input.dataset.role === "min" ? input.min : input.max;
+        const el = document.getElementById("r" + input.dataset.role + "-" + input.dataset.column);
+        if (el) el.textContent = input.value;
+      });
+      applyFilters();
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────────
+    function renderStats(stats) {
+      document.getElementById("stats").innerHTML = Object.entries(stats).map(([k, v]) =>
+        '<div class="stat-item"><div class="stat-value">' +
+        (typeof v === "number" && Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + "k" : v) +
+        '</div><div class="stat-label">' + k + "</div></div>"
+      ).join("");
+    }
+
+    function renderTable(table) {
+      currentTableData = table;
+      const total = table.total || table.rows.length;
+      const showing = table.rows.length;
+      let html = '<div class="table-count">' +
+        (total > showing ? "Showing " + showing + " of " + total.toLocaleString() + " rows" : showing + " rows") +
+        "</div>";
+      html += "<table><thead><tr>" +
+        table.columns.map((c, i) => '<th onclick="sortTable(' + i + ')">' + c + " ↕</th>").join("") +
+        "</tr></thead><tbody>" +
+        table.rows.map(row => "<tr>" + row.map(v => {
+          const n = Number(v);
+          const isNum = !isNaN(n) && v !== "" && v !== null;
+          return "<td" + (isNum ? ' style="text-align:right"' : "") + ">" +
+            (isNum ? n.toLocaleString() : (v === null ? "" : v)) + "</td>";
+        }).join("") + "</tr>").join("") +
+        "</tbody></table>";
+      document.getElementById("table").innerHTML = html;
+    }
+
+    window.sortTable = (colIdx) => {
+      if (!currentTableData) return;
+      if (currentSortCol === colIdx) { currentSortAsc = !currentSortAsc; }
+      else { currentSortCol = colIdx; currentSortAsc = true; }
+      const sorted = [...currentTableData.rows].sort((a, b) => {
+        const na = Number(a[colIdx]), nb = Number(b[colIdx]);
+        if (!isNaN(na) && !isNaN(nb)) return currentSortAsc ? na - nb : nb - na;
+        const sa = String(a[colIdx] || ""), sb = String(b[colIdx] || "");
+        return currentSortAsc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      });
+      renderTable({ ...currentTableData, rows: sorted });
+    };
+
+    // ── Tool result handler ───────────────────────────────────────────────────
+    app.ontoolresult = async ({ content }) => {
+      const text = content?.find(c => c.type === "text");
+      if (!text) return;
+      let r;
+      try { r = JSON.parse(text.text); } catch { return; }
+
+      if (r.action === "dashboard") {
+        currentVizId = r.id;
+        document.getElementById("dash-title").textContent = r.title;
+        clearChart("chart");
+        try { await Bokeh.embed.embed_item(r.figure); } catch (err) {
+          document.getElementById("chart").innerHTML = '<div class="error-box">Chart error: ' + err.message + "</div>";
+        }
+        renderStats(r.stats);
+        renderTable(r.table);
+        if (r.widget_config) buildFilterWidgets(r.widget_config);
+      }
+
+      if (r.action === "error") {
+        document.getElementById("chart").innerHTML = '<div class="error-box">' + r.message + "</div>";
       }
     };
 
     await app.connect();
-    document.getElementById("status").textContent = "Connected — ready";
   </script>
 </body>
 </html>

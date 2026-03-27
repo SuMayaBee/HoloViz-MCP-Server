@@ -12,32 +12,22 @@
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #334155;
       --text: #e0e0e0; --text-muted: #94a3b8; --accent: #818cf8;
-      --danger: #f87171;
+      --danger: #f87171; --btn-bg: #1e293b; --btn-border: #334155;
     }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
 
     .toolbar {
-      display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+      display: flex; align-items: center; gap: 6px; padding: 6px 10px;
       background: var(--surface); border-bottom: 1px solid var(--border);
     }
-    .toolbar button {
-      background: transparent; color: var(--text-muted); border: 1px solid var(--border);
-      padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.15s;
+    .toolbar-btn {
+      background: var(--btn-bg); color: var(--text-muted); border: 1px solid var(--btn-border);
+      padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.15s;
     }
-    .toolbar button:hover { background: var(--border); color: var(--text); }
+    .toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
     .toolbar .spacer { flex: 1; }
-    .toolbar .status { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
-    .toolbar .open-link {
-      font-size: 12px; color: var(--accent); text-decoration: none;
-      border: 1px solid var(--accent); padding: 4px 10px; border-radius: 4px;
-      transition: all 0.15s; white-space: nowrap;
-    }
-    .toolbar .open-link:hover { background: var(--accent); color: #fff; }
 
     #chart-container { width: 100%; min-height: 350px; padding: 10px; }
-
-    /* Dark mode inverts the entire chart area (works on canvas, iframe, and shadow DOM). */
-    #chart-container.dark { filter: invert(1) hue-rotate(180deg); }
 
     #insight-bar {
       display: none; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3);
@@ -54,17 +44,30 @@
       border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
     }
     .error-box { text-align: center; padding: 40px; color: var(--danger); }
+
+    .export-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .export-modal-inner {
+      background: var(--btn-bg); border-radius: 8px; padding: 16px;
+      width: 80%; max-height: 80%; overflow: auto; border: 1px solid var(--border);
+    }
+    .export-textarea {
+      width: 100%; height: 280px; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 4px; padding: 8px;
+      font-family: monospace; font-size: 11px; resize: vertical;
+    }
   </style>
 </head>
 <body>
-  <div class="toolbar">
-    <button id="btn-theme">Theme</button>
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <button class="toolbar-btn" id="btn-theme">Light Mode</button>
     <div class="spacer"></div>
-    <a id="btn-open" class="open-link" href="#" target="_blank" style="display:none">Open visualization</a>
-    <span id="status" class="status">Connecting...</span>
   </div>
 
-  <div id="chart-container" class="dark">
+  <div id="chart-container">
     <div class="loading">
       <div class="spinner"></div>
       <span>Preparing visualization...</span>
@@ -78,30 +81,98 @@
 
     const app = new App({ name: "HoloViz MCP App", version: "0.1.0" });
     const chartContainer = document.getElementById("chart-container");
-    const statusEl = document.getElementById("status");
-    const insightBar = document.getElementById("insight-bar");
-    const btnOpen = document.getElementById("btn-open");
-    let currentVizId = null;
-    let isDark = true;
 
-    function applyTheme() {
-      // UI chrome
-      document.documentElement.style.setProperty("--bg",       isDark ? "#0f172a" : "#ffffff");
-      document.documentElement.style.setProperty("--surface",  isDark ? "#1e293b" : "#f1f5f9");
-      document.documentElement.style.setProperty("--border",   isDark ? "#334155" : "#cbd5e1");
-      document.documentElement.style.setProperty("--text",     isDark ? "#e0e0e0" : "#1e293b");
-      document.documentElement.style.setProperty("--text-muted", isDark ? "#94a3b8" : "#64748b");
-      // Chart area — toggling the CSS class on the container is enough;
-      // filter on the container affects its entire painted output including canvas/shadow-DOM.
-      chartContainer.classList.toggle("dark", isDark);
+    function clearChart() {
+      if (window.Bokeh && Bokeh.index) {
+        for (const [id, view] of [...Bokeh.index]) {
+          if (chartContainer.contains(view.el)) {
+            try { view.remove(); } catch {}
+            Bokeh.index.delete(id);
+          }
+        }
+      }
+      chartContainer.innerHTML = "";
+    }
+    const insightBar = document.getElementById("insight-bar");
+    let currentVizId = null;
+    let currentTheme = "dark";
+
+    // ── Theme toggle ─────────────────────────────────────────────────────────
+    window.toggleTheme = async () => {
+      currentTheme = currentTheme === "dark" ? "light" : "dark";
+      document.getElementById("btn-theme").textContent = currentTheme === "dark" ? "Light Mode" : "Dark Mode";
+
+      if (currentVizId) {
+        try {
+          const response = await app.callServerTool({
+            name: "set_theme",
+            arguments: { viz_id: currentVizId, theme: currentTheme },
+          });
+          const t = response?.content?.find(c => c.type === "text");
+          if (t) {
+            const r = JSON.parse(t.text);
+            if (r.action === "theme_change" && r.figure) {
+              clearChart();
+              await Bokeh.embed.embed_item(r.figure);
+              return;
+            }
+          }
+        } catch (err) { console.log("Theme switch:", err); }
+      }
+      // Fallback for raw show() charts (not in viz store) — CSS filter invert
+      chartContainer.style.filter = currentTheme === "light" ? "invert(1) hue-rotate(180deg)" : "";
+    };
+
+    document.getElementById("btn-theme").addEventListener("click", toggleTheme);
+
+    // ── Save PNG ──────────────────────────────────────────────────────────────
+    window.exportPNG = () => {
+      const canvas = document.querySelector("#chart-container canvas");
+      if (!canvas) { alert("No chart canvas found"); return; }
+      const link = document.createElement("a");
+      link.download = "chart.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+
+    // ── Export CSV ────────────────────────────────────────────────────────────
+    window.exportCSV = async () => {
+      if (!currentVizId) return;
+      try {
+        const response = await app.callServerTool({
+          name: "export_data",
+          arguments: { viz_id: currentVizId, format: "csv" },
+        });
+        const t = response?.content?.find(c => c.type === "text");
+        if (!t) return;
+        const result = JSON.parse(t.text);
+        if (result.action === "export") {
+          _downloadOrModal(result.data, result.filename, "text/csv", "Export Data (CSV)");
+        }
+      } catch (err) { console.error("Export error:", err); }
+    };
+
+    function _downloadOrModal(data, filename, mime, label) {
+      try {
+        const blob = new Blob([data], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url; link.download = filename; link.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        const modal = document.createElement("div");
+        modal.className = "export-modal";
+        modal.innerHTML =
+          '<div class="export-modal-inner">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">' +
+          '<span>' + label + '</span>' +
+          '<button onclick="this.closest(\'.export-modal\').remove()" class="toolbar-btn">Close</button></div>' +
+          '<textarea class="export-textarea">' + data.replace(/</g, "&lt;") + "</textarea></div>";
+        document.body.appendChild(modal);
+      }
     }
 
-    document.getElementById("btn-theme").addEventListener("click", () => {
-      isDark = !isDark;
-      applyTheme();
-    });
-
-    // Handle click events from Bokeh TapTool
+    // ── Bokeh TapTool → handle_interaction ────────────────────────────────────
     window.addEventListener("bokeh-tap", async (e) => {
       if (!currentVizId) return;
       try {
@@ -124,63 +195,60 @@
             }
           } catch {}
         }
-      } catch (err) {
-        console.log("Click handler:", err);
-      }
+      } catch (err) { console.log("Click handler:", err); }
     });
 
-    // Receive tool results from the LLM
+    // ── Tool result handler ───────────────────────────────────────────────────
     app.ontoolresult = async ({ content }) => {
       const textContent = content?.find((c) => c.type === "text");
       if (!textContent) return;
 
       let result;
-      try {
-        result = JSON.parse(textContent.text);
-      } catch {
-        return;
-      }
+      try { result = JSON.parse(textContent.text); } catch { return; }
 
-      if (result.action === "create" && result.figure) {
-        // Pure HoloViews/hvPlot — rendered client-side by BokehJS
-        currentVizId = result.viz_id || null;
-        if (result.url) { btnOpen.href = result.url; btnOpen.style.display = ""; }
+      if (result.action === "create" || result.action === "update") {
+        currentVizId = result.viz_id || result.id || null;
+        document.getElementById("toolbar").style.display = "flex";
+        clearChart();
         chartContainer.innerHTML = '<div class="loading"><div class="spinner"></div><span>Rendering chart...</span></div>';
         try {
-          chartContainer.innerHTML = "";
+          clearChart();
           await Bokeh.embed.embed_item(result.figure);
-          statusEl.textContent = result.name || "Visualization created";
           insightBar.style.display = "none";
         } catch (err) {
           chartContainer.innerHTML = '<div class="error-box">Render error: ' + err.message + "</div>";
-          statusEl.textContent = "Render error";
         }
 
       } else if (result.action === "panel_url" && result.url) {
-        // Panel widget — load live Panel server in iframe
         currentVizId = result.viz_id || null;
-        btnOpen.href = result.url; btnOpen.style.display = "";
+        document.getElementById("toolbar").style.display = "flex";
         chartContainer.innerHTML = "";
         const frame = document.createElement("iframe");
         frame.src = result.url;
         frame.style.cssText = "width:100%;height:500px;border:none;";
         chartContainer.appendChild(frame);
-        statusEl.textContent = result.name || "Visualization loaded";
         insightBar.style.display = "none";
+
+      } else if (result.action === "theme_change" && result.figure) {
+        clearChart();
+        try { await Bokeh.embed.embed_item(result.figure); } catch (err) {
+          chartContainer.innerHTML = '<div class="error-box">Theme error: ' + err.message + "</div>";
+        }
+
+      } else if (result.action === "export") {
+        const mime = result.format === "csv" ? "text/csv" : "application/json";
+        _downloadOrModal(result.data, result.filename, mime, "Export Data (" + result.format.toUpperCase() + ")");
 
       } else if (result.action === "insight" && result.message) {
         insightBar.textContent = result.message;
         insightBar.style.display = "block";
 
-      } else if (result.url) {
-        // Fallback
-        btnOpen.href = result.url; btnOpen.style.display = "";
-        statusEl.textContent = result.name || "Ready";
+      } else if (result.action === "error") {
+        chartContainer.innerHTML = '<div class="error-box">' + result.message + "</div>";
       }
     };
 
     await app.connect();
-    statusEl.textContent = "Connected - ready";
   </script>
 </body>
 </html>

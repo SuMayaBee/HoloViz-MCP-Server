@@ -47,7 +47,9 @@ def main_callback(
 def serve(
     port: int = typer.Option(5077, "--port", "-p", help="Port for Panel server.", envvar="HOLOVIZ_MCP_SERVER_PORT"),
     host: str = typer.Option("localhost", "--host", "-H", help="Host address.", envvar="HOLOVIZ_MCP_SERVER_HOST"),
-    db_path: str | None = typer.Option(None, "--db-path", help="SQLite database path.", envvar="HOLOVIZ_MCP_SERVER_DB_PATH"),
+    db_path: str | None = typer.Option(
+        None, "--db-path", help="SQLite database path.", envvar="HOLOVIZ_MCP_SERVER_DB_PATH"
+    ),
     show: bool = typer.Option(False, "--show", help="Open in browser."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose logging."),
 ) -> None:
@@ -129,7 +131,7 @@ def status(
         typer.echo(f"Not running  (nothing on {host}:{port})")
         raise typer.Exit(1) from None
     except requests.Timeout:
-        typer.echo(f"Timeout  (no response within 3s)")
+        typer.echo("Timeout  (no response within 3s)")
         raise typer.Exit(1) from None
 
 
