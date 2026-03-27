@@ -224,67 +224,6 @@ class SnippetDatabase:
             conn.commit()
             return cursor.rowcount > 0
 
-    def list_snippets(
-        self,
-        limit: int = 100,
-        offset: int = 0,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        status: Optional[str] = None,
-        method: Optional[str] = None,
-    ) -> list[Snippet]:
-        query = "SELECT * FROM snippets WHERE 1=1"
-        params: list[str] = []
-
-        if start:
-            query += " AND created_at >= ?"
-            params.append(start.isoformat())
-        if end:
-            query += " AND created_at <= ?"
-            params.append(end.isoformat())
-        if status:
-            query += " AND status = ?"
-            params.append(status)
-        if method:
-            query += " AND method = ?"
-            params.append(method)
-
-        query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-        params.extend([str(limit), str(offset)])
-
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            return [self._row_to_snippet(dict(row)) for row in rows]
-
-    def delete_snippet(self, snippet_id: str) -> bool:
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "DELETE FROM snippets_fts WHERE rowid = (SELECT rowid FROM snippets WHERE id = ?)",
-                (snippet_id,),
-            )
-            cursor.execute("DELETE FROM snippets WHERE id = ?", (snippet_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-
-    def search_snippets(self, query: str, limit: int = 100) -> list[Snippet]:
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT r.* FROM snippets r
-                JOIN snippets_fts fts ON r.rowid = fts.rowid
-                WHERE snippets_fts MATCH ?
-                ORDER BY r.created_at DESC
-                LIMIT ?
-                """,
-                (query, limit),
-            )
-            rows = cursor.fetchall()
-            return [self._row_to_snippet(dict(row)) for row in rows]
-
     def create_visualization(
         self,
         app: str,

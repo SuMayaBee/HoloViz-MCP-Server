@@ -13,13 +13,6 @@ from holoviz_mcp_server.display.endpoints import SnippetEndpoint
 logger = logging.getLogger(__name__)
 
 
-def _display_url(address: str, port: int, endpoint: str) -> str:
-    external_url = get_config().external_url
-    if external_url:
-        return f"{external_url.rstrip('/')}/{endpoint}"
-    return f"http://{address}:{port}/{endpoint}"
-
-
 def _build_websocket_origins(address: str, port: int) -> list[str]:
     origins: set[str] = {
         f"localhost:{port}",
@@ -49,9 +42,6 @@ def main(address: str = "localhost", port: int = 5077, show: bool = True) -> Non
     import panel as pn
 
     from holoviz_mcp_server.display.database import get_db
-    from holoviz_mcp_server.display.pages import add_page
-    from holoviz_mcp_server.display.pages import admin_page
-    from holoviz_mcp_server.display.pages import feed_page
     from holoviz_mcp_server.display.pages import view_page
 
     _ = get_db()
@@ -60,12 +50,7 @@ def main(address: str = "localhost", port: int = 5077, show: bool = True) -> Non
     pn.pane.Markdown.param.disable_anchors.default = True
     pn.state.cache["views"] = {}
 
-    pages = {
-        "/view": view_page,
-        "/feed": feed_page,
-        "/admin": admin_page,
-        "/add": add_page,
-    }
+    pages = {"/view": view_page}
 
     extra_patterns = [
         (r"/api/snippet", SnippetEndpoint),
@@ -73,9 +58,6 @@ def main(address: str = "localhost", port: int = 5077, show: bool = True) -> Non
     ]
 
     logger.info(f"Starting HoloViz MCP App server at http://{address}:{port}")
-    logger.info(f"  Feed:   {_display_url(address, port, 'feed')}")
-    logger.info(f"  Add:    {_display_url(address, port, 'add')}")
-    logger.info(f"  Admin:  {_display_url(address, port, 'admin')}")
 
     pn.serve(
         pages,
