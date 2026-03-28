@@ -6,6 +6,136 @@ Built on Panel, HoloViews, hvPlot, and FastMCP.
 
 ---
 
+## Architecture
+
+This project is designed as an MCP-native visualization platform: LLMs call tools, the server validates and executes visualization code safely, and users get live, interactive UIs inline in chat.
+
+### Architecture at a glance
+
+```mermaid
+flowchart TB
+  subgraph A[LLM Client Layer]
+    C1[VS Code Copilot]
+    C2[Claude Desktop]
+    C3[Cursor]
+  end
+
+  subgraph B[MCP Orchestration Layer - FastMCP]
+    M1[Core tools
+    show stream load_data validate]
+    M2[Guided tools
+    viz.create dashboard stream multi]
+    M3[Introspection tools
+    pn.* hvplot.* hv.* skills]
+  end
+
+  subgraph V[Validation and Safety Pipeline]
+    V1[AST syntax check]
+    V2[Ruff security rules + blocked imports]
+    V3[Package availability checks]
+    V4[Panel extension availability]
+    V5[Runtime validation in isolated module]
+  end
+
+  subgraph D[Display Runtime - Panel Subprocess]
+    D1[REST API
+    /api/snippet /api/health]
+    D2[Snippet execution and rendering]
+    D3[View routes
+    /view and feed]
+  end
+
+  subgraph P[Persistence Layer]
+    P1[SQLite + FTS5 snippets database]
+    P2[Metadata status requirements extensions]
+  end
+
+  subgraph U[MCP App UI Templates]
+    U1[show.html
+    chart viewer + interactions]
+    U2[dashboard.html
+    filters stats table]
+    U3[stream.html
+    live stream shell]
+    U4[multi.html
+    multi-chart container]
+  end
+
+  subgraph S[HoloViz Stack]
+    S1[hvPlot]
+    S2[HoloViews]
+    S3[Panel]
+    S4[Bokeh]
+    S5[Param]
+  end
+
+  subgraph Data[Data Layer]
+    R1[CSV TSV JSON Parquet Excel Zarr]
+    R2[Remote URLs
+    s3:// https://]
+    R3[pandas numpy xarray]
+  end
+
+  C1 --> M1
+  C2 --> M1
+  C3 --> M1
+  C1 --> M2
+  C2 --> M2
+  C3 --> M2
+  C1 --> M3
+  C2 --> M3
+  C3 --> M3
+
+  M1 --> V
+  M2 --> V
+  V --> D1
+  D1 --> D2
+  D2 --> P1
+  P1 --> P2
+  D2 --> U
+  D2 --> S
+  M1 --> Data
+  M2 --> Data
+```
+
+### Layer responsibilities
+
+| Layer | Responsibility | Key implementation modules |
+|------|----------------|----------------------------|
+| LLM Client Layer | Hosts the chat UX and invokes MCP tools | VS Code Copilot, Claude Desktop, Cursor |
+| MCP Orchestration | Defines tool surface and namespaces | `server/main.py`, `server/compose.py`, `server/guided_mcp.py` |
+| Validation and Safety | Enforces secure code execution before rendering | `validation.py`, `utils.py`, `display/database.py` |
+| Display Runtime | Runs Panel as managed subprocess, serves rendered apps | `display/manager.py`, `display/app.py`, `display/endpoints.py` |
+| Persistence | Stores every snippet and execution metadata for replay/debug/search | `display/database.py` |
+| MCP App UI | Renders interactive outputs inline in chat sandboxes | `templates/show.html`, `templates/dashboard.html`, `templates/stream.html`, `templates/multi.html` |
+| HoloViz Stack | Visualization abstraction and rendering backend | Panel, HoloViews, hvPlot, Bokeh, Param |
+| Data Layer | Ingestion and profiling for local and remote datasets | `load_data()` tool in `server/main.py` |
+
+### End-to-end flow
+
+1. An agent calls a tool such as `show`, `viz.create`, or `viz.dashboard`.
+2. The server runs a 5-layer validation pipeline (syntax, security, packages, extensions, runtime).
+3. Validated code/config is sent to the Panel display subprocess via REST.
+4. The display server executes and persists the snippet in SQLite.
+5. The tool returns either:
+   - a Bokeh JSON spec for direct in-chat embedding, or
+   - a Panel URL rendered in an iframe.
+6. MCP App templates provide rich UX (filters, theme toggle, exports, click-to-insight).
+
+### Why this architecture is a strong GSoC fit
+
+This directly implements the GSoC idea of "Panel / HoloViews MCP Integration" by delivering:
+
+- MCP Apps-first UX: visualizations are returned as interactive UI resources, not plain text.
+- Agent-native workflows: LLMs can create, modify, filter, annotate, and export visual outputs.
+- Safe execution model: multi-layer validation plus controlled subprocess execution.
+- Real interoperability: works across major MCP clients and supports local/remote data sources.
+- Extensible design: namespaced tools (`viz`, `pn`, `hvplot`, `hv`) keep growth manageable for future capabilities.
+
+In short, the project turns HoloViz into a first-class interactive runtime for agent conversations, which is exactly the core value proposed in the GSoC problem statement.
+
+---
+
 ## What it does
 
 - Ask your AI assistant to create a chart — it renders **inline in the chat**
