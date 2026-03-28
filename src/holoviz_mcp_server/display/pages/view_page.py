@@ -23,7 +23,7 @@ def create_view(snippet_id: str) -> pn.viewable.Viewable | None:
     snippet = db.get_snippet(snippet_id)
 
     session_extensions = list({"codeeditor"} | set(find_extensions(snippet.app) if snippet else []))
-    pn.extension(*session_extensions)
+    pn.extension(*session_extensions, theme="dark")
 
     if not snippet:
         return pn.pane.Markdown(f"# Error\n\nSnippet {snippet_id} not found.")
@@ -78,6 +78,36 @@ def create_view(snippet_id: str) -> pn.viewable.Viewable | None:
     return result
 
 
+def _resize_script() -> pn.pane.HTML:
+    """Inject a script that posts the page height to the parent MCP App frame."""
+    return pn.pane.HTML(
+        """<script>
+        function _notifyHeight() {
+          // Panel sets body/html to height:100%, so scrollHeight == clientHeight.
+          // Temporarily set height:auto to measure the true content height.
+          const prevBody = document.body.style.height;
+          const prevHtml = document.documentElement.style.height;
+          document.body.style.height = 'auto';
+          document.documentElement.style.height = 'auto';
+          const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 400);
+          document.body.style.height = prevBody;
+          document.documentElement.style.height = prevHtml;
+          window.parent.postMessage({ type: 'iframe-resize', height: h + 32 }, '*');
+        }
+        // Fire after initial render and again after Panel's async content loads
+        window.addEventListener('load', () => {
+          setTimeout(_notifyHeight, 300);
+          setTimeout(_notifyHeight, 1000);
+          setTimeout(_notifyHeight, 2500);
+        });
+        new ResizeObserver(_notifyHeight).observe(document.body);
+        </script>""",
+        height=0,
+        margin=0,
+        stylesheets=[""],
+    )
+
+
 def _execute_code(snippet: Snippet) -> pn.viewable.Viewable | None:
     """Execute code and return Panel component."""
     module_name = f"bokeh_app_hvmcp_snippet_{snippet.id.replace('-', '_')}"
@@ -106,9 +136,9 @@ def _execute_code(snippet: Snippet) -> pn.viewable.Viewable | None:
             sys.modules.pop(module_name, None)
 
         if result is not None:
-            return pn.panel(result, sizing_mode="stretch_width")
+            return pn.Column(_resize_script(), pn.panel(result, sizing_mode="stretch_width"), sizing_mode="stretch_width")
         else:
-            return pn.pane.Markdown("*Code executed successfully (no output to display)*")
+            return pn.Column(_resize_script(), pn.pane.Markdown("*Code executed successfully (no output to display)*"))
 
     else:  # panel method
         app = preamble + snippet.app

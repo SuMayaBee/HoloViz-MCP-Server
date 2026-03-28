@@ -250,6 +250,10 @@ mcp = FastMCP(
         "- hvplot.list/hvplot.get: hvPlot plot type discovery\n"
         "- hv.list/hv.get: HoloViews element discovery\n\n"
         "LIBRARY PREFERENCE: hvPlot > HoloViews > Panel > Matplotlib > Plotly > Bokeh\n\n"
+        "CHART TYPE NOTES:\n"
+        "- hvPlot does NOT support pie/donut charts — use Bokeh figure.wedge() with cumsum() transform instead\n"
+        "- For pie charts: from bokeh.transform import cumsum; df['angle'] = df[col]/df[col].sum()*2*3.14159; p.wedge(...)\n"
+        "- For gauge/radial/polar charts: use Bokeh or Matplotlib, not hvPlot\n\n"
         "After show(), always present the URL as a clickable Markdown link: [Open visualization](url)\n"
         "In VS Code: the link opens in Simple Browser inside the editor."
     ),
@@ -260,7 +264,7 @@ mcp = FastMCP(
 # --- MCP App Resources (templates for inline rendering in Claude Desktop) ---
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v3"
+VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v6"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
 DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 

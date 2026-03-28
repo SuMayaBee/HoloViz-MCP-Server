@@ -13,7 +13,7 @@ from fastmcp.server.apps import AppConfig
 mcp = FastMCP("Guided Viz Tools")
 
 # Resource URIs match those defined on the main server
-VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v3"
+VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v6"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
 DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 

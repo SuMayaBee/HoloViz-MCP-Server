@@ -36,7 +36,7 @@
 
     #stream-frame {
       width: 100%; border: none; background: var(--bg);
-      height: calc(100vh - 42px);
+      min-height: 500px; height: 600px; display: block;
     }
 
     .loading {
@@ -53,8 +53,6 @@
 <body>
   <div class="toolbar">
     <span class="live-badge"><span class="live-dot"></span> LIVE</span>
-    <button id="btn-pause">⏸ Pause</button>
-    <button id="btn-theme">🌓 Theme</button>
   </div>
 
   <div id="stream-container">
@@ -68,22 +66,7 @@
     import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps@1.3.1/dist/src/app-with-deps";
 
     const app = new App({ name: "HoloViz Stream", version: "0.1.0" });
-    let isPaused = false;
     let currentVizId = null;
-
-    document.getElementById("btn-pause").addEventListener("click", async () => {
-      isPaused = !isPaused;
-      document.getElementById("btn-pause").textContent = isPaused ? "▶ Resume" : "⏸ Pause";
-
-      if (currentVizId) {
-        try {
-          await app.callServerTool({
-            name: "pause_stream",
-            arguments: { viz_id: currentVizId, paused: isPaused },
-          });
-        } catch (err) { console.log("Pause error:", err); }
-      }
-    });
 
     app.ontoolresult = async ({ content }) => {
       const textContent = content?.find(c => c.type === "text");
@@ -110,6 +93,13 @@
 
       }
     };
+
+    window.addEventListener("message", (e) => {
+      if (e.data?.type === "iframe-resize") {
+        const frame = document.getElementById("stream-frame");
+        if (frame) frame.style.height = Math.max(e.data.height, 500) + "px";
+      }
+    });
 
     await app.connect();
   </script>

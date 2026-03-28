@@ -199,9 +199,14 @@
     });
 
     // ── Tool result handler ───────────────────────────────────────────────────
-    app.ontoolresult = async ({ content }) => {
+    app.ontoolresult = async ({ content, isError }) => {
       const textContent = content?.find((c) => c.type === "text");
       if (!textContent) return;
+
+      if (isError) {
+        chartContainer.innerHTML = "";
+        return;
+      }
 
       let result;
       try { result = JSON.parse(textContent.text); } catch { return; }
@@ -225,7 +230,8 @@
         chartContainer.innerHTML = "";
         const frame = document.createElement("iframe");
         frame.src = result.url;
-        frame.style.cssText = "width:100%;height:500px;border:none;";
+        frame.id = "panel-iframe";
+        frame.style.cssText = "width:100%;height:900px;border:none;display:block;";
         chartContainer.appendChild(frame);
         insightBar.style.display = "none";
 
@@ -247,6 +253,14 @@
         chartContainer.innerHTML = '<div class="error-box">' + result.message + "</div>";
       }
     };
+
+    // Auto-resize Panel iframe when the Panel page reports its height
+    window.addEventListener("message", (e) => {
+      if (e.data?.type === "iframe-resize") {
+        const frame = document.getElementById("panel-iframe");
+        if (frame) frame.style.height = Math.max(e.data.height, 500) + "px";
+      }
+    });
 
     await app.connect();
   </script>
