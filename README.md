@@ -1,8 +1,82 @@
+<div align="center">
+
+<img src="assets/panel.png" height="60" alt="Panel" />
+&nbsp;&nbsp;&nbsp;
+<img src="assets/holoviews.png" height="60" alt="HoloViews" />
+&nbsp;&nbsp;&nbsp;
+<img src="assets/hvplot.png" height="60" alt="hvPlot" />
+
 # HoloViz MCP Server
 
-An MCP server for the HoloViz ecosystem. Lets AI agents (Claude, Copilot, Cursor) create interactive visualizations and dashboards that render as live UIs directly inside LLM chat via MCP Apps.
+**Let AI agents create interactive visualizations that render live inside your chat — no code required.**
 
-Built on Panel, HoloViews, hvPlot, and FastMCP.
+Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel.holoviz.org) · [HoloViews](https://holoviews.org) · [hvPlot](https://hvplot.holoviz.org) · [Bokeh](https://bokeh.org)
+
+[![PyPI](https://img.shields.io/pypi/v/holoviz-mcp-server)](https://pypi.org/project/holoviz-mcp-server/)
+[![Python](https://img.shields.io/pypi/pyversions/holoviz-mcp-server)](https://pypi.org/project/holoviz-mcp-server/)
+[![License](https://img.shields.io/pypi/l/holoviz-mcp-server)](LICENSE)
+
+**30+ MCP tools · 7 chart categories · 4 interactive UI templates · live streaming · bidirectional interaction**
+
+</div>
+
+---
+
+## Showcase
+
+### 1. Inline Chart
+
+> *"Create a bar chart comparing programming language popularity: Python=32%, JavaScript=28%, Java=18%, TypeScript=12%, Others=10%"*
+
+<!-- GIF -->
+
+---
+
+### 2. Panel Widgets & Interactivity
+
+> *"Build a Panel dashboard with a slider controlling sigma in a normal distribution, updating the histogram in real time"*
+
+<!-- GIF -->
+
+---
+
+### 3. Streaming / Live Data
+
+> *"Create a live dashboard showing a real-time sine wave that updates every 500ms"*
+
+<!-- GIF -->
+
+---
+
+### 4. Real Data Loading
+
+> *"Load this dataset and profile it, then show a correlation heatmap: https://raw.githubusercontent.com/mwaskom/seaborn-data/master/tips.csv"*
+
+<!-- GIF -->
+
+---
+
+### 5. Maps
+
+> *"Plot the top 10 most populous cities in the world on an interactive tile map with population shown as point size"*
+
+<!-- GIF -->
+
+---
+
+### 6. Multi-Panel Dashboard
+
+> *"Build a dashboard with 3 panels: a bar chart of fruit sales (Apple=50, Banana=30, Mango=45), a pie chart of the same data, and a summary stats table"*
+
+<!-- GIF -->
+
+---
+
+### 7. Bidirectional Interaction
+
+> *"Create an interactive scatter plot of the tips dataset where selecting points in the chart updates a summary statistics table below it"*
+
+<!-- GIF -->
 
 ---
 
