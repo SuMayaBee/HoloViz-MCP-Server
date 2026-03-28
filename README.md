@@ -48,7 +48,7 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel
 
 ---
 
-### 4. Real Data Loading
+### 4. Remote Data Loading
 
 *"Load this dataset and profile it, then show a correlation heatmap: https://raw.githubusercontent.com/mwaskom/seaborn-data/master/tips.csv"*
 
