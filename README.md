@@ -41,7 +41,17 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 ### Requirements
 
 - Python 3.11+
-- `uvx` (install via `pip install uv`)
+- `uv` — required to run `uvx`. Install it first:
+  ```bash
+  # macOS / Linux
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  # Windows
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
+
+  # Or via pip
+  pip install uv
+  ```
 - Port 5077 available (Panel display server)
 
 ---
