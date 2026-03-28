@@ -63,7 +63,7 @@
 </head>
 <body>
   <div class="toolbar" id="toolbar" style="display:none;">
-    <button class="toolbar-btn" id="btn-theme">Light Mode</button>
+    <button class="toolbar-btn" id="btn-theme">Dark Mode</button>
     <div class="spacer"></div>
   </div>
 
@@ -95,7 +95,7 @@
     }
     const insightBar = document.getElementById("insight-bar");
     let currentVizId = null;
-    let currentTheme = "dark";
+    let currentTheme = "light";
 
     // ── Theme toggle ─────────────────────────────────────────────────────────
     window.toggleTheme = async () => {
@@ -223,6 +223,7 @@
         try {
           clearChart();
           await Bokeh.embed.embed_item(result.figure);
+          chartContainer.style.filter = currentTheme === "light" ? "invert(1) hue-rotate(180deg)" : "";
           insightBar.style.display = "none";
         } catch (err) {
           chartContainer.innerHTML = '<div class="error-box">Render error: ' + err.message + "</div>";

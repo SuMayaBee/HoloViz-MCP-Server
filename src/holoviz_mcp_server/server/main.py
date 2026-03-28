@@ -271,7 +271,7 @@ mcp = FastMCP(
 # --- MCP App Resources (templates for inline rendering in Claude Desktop) ---
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v7"
+VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v9"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
 DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 
