@@ -22,61 +22,61 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel
 
 ---
 
-## Showcase
+## Demo
 
 ### 1. Inline Chart
 
-> *"Create a bar chart comparing programming language popularity: Python=32%, JavaScript=28%, Java=18%, TypeScript=12%, Others=10%"*
+*"Create a bar chart comparing programming language popularity: Python=32%, JavaScript=28%, Java=18%, TypeScript=12%, Others=10%"*
 
-<!-- GIF -->
+![111](https://github.com/user-attachments/assets/2f4cc6e4-2e1a-493e-9a89-430d95c07955)
 
 ---
 
 ### 2. Panel Widgets & Interactivity
 
-> *"Build a Panel dashboard with a slider controlling sigma in a normal distribution, updating the histogram in real time"*
+*"Build a Panel dashboard with a slider controlling sigma in a normal distribution, updating the histogram in real time"*
 
-<!-- GIF -->
+![222](https://github.com/user-attachments/assets/1ab84c73-dd77-4db4-aba6-054a8f2e55ff)
 
 ---
 
 ### 3. Streaming / Live Data
 
-> *"Create a live dashboard showing a real-time sine wave that updates every 500ms"*
+*"Create a live dashboard showing a real-time sine wave that updates every 500ms"*
 
-<!-- GIF -->
+![333](https://github.com/user-attachments/assets/d41bd696-50a7-446a-b9f0-35761ac9b657)
 
 ---
 
 ### 4. Real Data Loading
 
-> *"Load this dataset and profile it, then show a correlation heatmap: https://raw.githubusercontent.com/mwaskom/seaborn-data/master/tips.csv"*
+*"Load this dataset and profile it, then show a correlation heatmap: https://raw.githubusercontent.com/mwaskom/seaborn-data/master/tips.csv"*
 
-<!-- GIF -->
+![444](https://github.com/user-attachments/assets/1d981b6b-9591-436b-b2f1-c34f1da07275)
 
 ---
 
 ### 5. Maps
 
-> *"Plot the top 10 most populous cities in the world on an interactive tile map with population shown as point size"*
+*"Plot the top 10 most populous cities in the world on an interactive tile map with population shown as point size"*
 
-<!-- GIF -->
+![555](https://github.com/user-attachments/assets/f422d49b-f098-45e8-9fc8-1daca4f52d42)
 
 ---
 
 ### 6. Multi-Panel Dashboard
 
-> *"Build a dashboard with 3 panels: a bar chart of fruit sales (Apple=50, Banana=30, Mango=45), a pie chart of the same data, and a summary stats table"*
+*"Build a dashboard with 3 panels: a bar chart of fruit sales (Apple=50, Banana=30, Mango=45), a pie chart of the same data, and a summary stats table"*
 
-<!-- GIF -->
+![666](https://github.com/user-attachments/assets/0348a730-3e08-47cd-8da4-86197298f562)
 
 ---
 
 ### 7. Bidirectional Interaction
 
-> *"Create an interactive scatter plot of the tips dataset where selecting points in the chart updates a summary statistics table below it"*
+*"Create an interactive scatter plot of the tips dataset where selecting points in the chart updates a summary statistics table below it"*
 
-<!-- GIF -->
+![777](https://github.com/user-attachments/assets/a5bd1175-ae41-485b-b48f-8d1fb8fbd68d)
 
 ---
 
@@ -84,7 +84,7 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel
 
 This project is designed as an MCP-native visualization platform: LLMs call tools, the server validates and executes visualization code safely, and users get live, interactive UIs inline in chat.
 
-### Architecture at a glance
+**Architecture at a glance**
 
 ```mermaid
 flowchart TB
