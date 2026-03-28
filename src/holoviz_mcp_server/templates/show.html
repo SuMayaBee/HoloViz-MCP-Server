@@ -209,7 +209,11 @@
       }
 
       let result;
-      try { result = JSON.parse(textContent.text); } catch { return; }
+      try { result = JSON.parse(textContent.text); } catch {
+        // Tool returned non-JSON (error message) — clear the spinner
+        chartContainer.innerHTML = "";
+        return;
+      }
 
       if (result.action === "create" || result.action === "update") {
         currentVizId = result.viz_id || result.id || null;

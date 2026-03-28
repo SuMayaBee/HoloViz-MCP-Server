@@ -250,10 +250,17 @@ mcp = FastMCP(
         "- hvplot.list/hvplot.get: hvPlot plot type discovery\n"
         "- hv.list/hv.get: HoloViews element discovery\n\n"
         "LIBRARY PREFERENCE: hvPlot > HoloViews > Panel > Matplotlib > Plotly > Bokeh\n\n"
+        "ENVIRONMENT NOTES:\n"
+        "- All required packages are pre-installed — NEVER suggest pip install, pixi install, or pixi remove commands\n"
+        "- If a package is missing, use list_packages() to check what IS available and rewrite the code accordingly\n\n"
+        "PANEL LAYOUT NOTES:\n"
+        "- NEVER use sizing_mode='stretch_both' on pn.Column or top-level layouts — causes huge empty gaps between components\n"
+        "- Use sizing_mode='stretch_width' instead; only set explicit height on chart/plot panes\n\n"
         "CHART TYPE NOTES:\n"
         "- hvPlot does NOT support pie/donut charts — use Bokeh figure.wedge() with cumsum() transform instead\n"
         "- For pie charts: from bokeh.transform import cumsum; df['angle'] = df[col]/df[col].sum()*2*3.14159; p.wedge(...)\n"
-        "- For gauge/radial/polar charts: use Bokeh or Matplotlib, not hvPlot\n\n"
+        "- For gauge/radial/polar charts: use Bokeh or Matplotlib, not hvPlot\n"
+        "- For tile maps (OpenStreetMap, CartoDB): use df.hvplot.points(geo=True, tiles='OSM') — NEVER import bokeh.tile_providers (removed in Bokeh 3.x)\n\n"
         "After show(), always present the URL as a clickable Markdown link: [Open visualization](url)\n"
         "In VS Code: the link opens in Simple Browser inside the editor."
     ),
@@ -264,7 +271,7 @@ mcp = FastMCP(
 # --- MCP App Resources (templates for inline rendering in Claude Desktop) ---
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v6"
+VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v7"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
 DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 

@@ -50,6 +50,19 @@ def main(address: str = "localhost", port: int = 5077, show: bool = True) -> Non
     pn.pane.Markdown.param.disable_anchors.default = True
     pn.state.cache["views"] = {}
 
+    # Remove Panel's default minimum heights on text/html panes so they
+    # don't create large empty gaps in column layouts.
+    pn.config.raw_css = ["""
+        .bk-panel-models-markup-Markdown,
+        .bk-panel-models-markup-HTML,
+        .bk-panel-models-dom-Str,
+        .bk-panel-models-base-VSpacer {
+            height: auto !important;
+            min-height: 0 !important;
+            flex-shrink: 1 !important;
+        }
+    """]
+
     pages = {"/view": view_page}
 
     extra_patterns = [

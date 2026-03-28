@@ -67,3 +67,36 @@ p.annular_wedge(
 - For > 10 slices use `from bokeh.palettes import turbo` and slice it: `turbo(len(df))`
 - Last expression must be the Bokeh `figure` object `p` so Panel can render it
 - Do NOT call `show(p)` — just return `p` as the last expression
+
+## Tile Maps (OpenStreetMap, CartoDB, etc.)
+
+**NEVER use `bokeh.tile_providers`** — removed in Bokeh 3.x. Use hvPlot with `tiles=` instead:
+
+```python
+import pandas as pd
+import hvplot.pandas
+
+df = pd.DataFrame({
+    'lat': [40.7128, 40.7580, 40.6892],
+    'lon': [-74.0060, -73.9855, -74.0445],
+    'label': ['City Hall', 'Times Square', 'Statue of Liberty'],
+})
+
+plot = df.hvplot.points(
+    x='lon', y='lat',
+    geo=True,
+    tiles='OSM',          # OpenStreetMap tiles
+    color='red',
+    size=10,
+    hover_cols=['label'],
+    title='New York City',
+    width=700, height=500,
+)
+plot
+```
+
+**Available tile options:** `'OSM'`, `'CartoDark'`, `'CartoLight'`, `'EsriImagery'`, `'EsriNatGeo'`
+
+- Use `geo=True` with real lat/lon coordinates (WGS84)
+- Do NOT import `geoviews` explicitly — hvPlot handles it
+- Do NOT use `from bokeh.tile_providers import get_provider` — that module is gone

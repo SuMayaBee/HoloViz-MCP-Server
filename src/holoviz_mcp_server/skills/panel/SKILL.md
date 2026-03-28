@@ -129,9 +129,36 @@ class Dashboard(pn.viewable.Viewer):
 
 ### Responsive Design
 
-- Use `sizing_mode="stretch_width"` by default
+- Use `sizing_mode="stretch_width"` by default on individual components and layouts
+- **NEVER use `sizing_mode="stretch_both"` on `pn.Column` or the top-level layout** — it distributes the full page height equally across all children, creating huge empty gaps below small text components
 - Use `FlexBox` or `GridSpec` for complex layouts
 - Set `min_width`, `max_width` to prevent collapse
+
+### Avoiding Empty Gaps (CRITICAL)
+
+Large blank spaces between components happen when the layout tries to fill the full page height.
+
+**DON'T:**
+```python
+pn.Column(
+    pn.pane.Markdown("# Title"),      # Gets 33% of page height → huge gap
+    pn.pane.Markdown("subtitle"),     # Gets 33% of page height → huge gap
+    chart,                            # Gets 33% of page height
+    sizing_mode="stretch_both",       # ← this is the culprit
+).servable()
+```
+
+**DO:**
+```python
+pn.Column(
+    pn.pane.Markdown("# Title"),
+    pn.pane.Markdown("subtitle"),
+    chart,
+    sizing_mode="stretch_width",      # ← width only, height is natural
+).servable()
+```
+
+Rule: only the chart/plot pane should have a fixed `height=` or `min_height=`. Text and widget panes should have no explicit height.
 
 ### Extensions
 
