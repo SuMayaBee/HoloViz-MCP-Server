@@ -201,14 +201,26 @@ flowchart TB
 
 ## Installation
 
-### VS Code / Cursor
+> **Prerequisite:** Install [`uv`](https://docs.astral.sh/uv/) first:
+> ```bash
+> # macOS / Linux
+> curl -LsSf https://astral.sh/uv/install.sh | sh
+> # Windows
+> powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
+> # Or via pip
+> pip install uv
+> ```
 
-Add to your `mcp.json` (or `.vscode/mcp.json`):
+<details>
+<summary><b>VS Code / Copilot Chat (Recommended)</b></summary>
+
+Add to your global `~/.config/Code - Insiders/User/mcp.json` or workspace `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "holoviz": {
+      "type": "stdio",
       "command": "uvx",
       "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
     }
@@ -216,7 +228,12 @@ Add to your `mcp.json` (or `.vscode/mcp.json`):
 }
 ```
 
-### Claude Desktop
+Open Copilot Chat (`Ctrl+Alt+I`) → switch to **Agent** mode → start chatting.
+
+</details>
+
+<details>
+<summary><b>Claude Desktop</b></summary>
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
@@ -231,43 +248,49 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-### Requirements
+Restart Claude Desktop.
 
-- Python 3.11+
-- `uv` — required to run `uvx`. Install it first:
+</details>
 
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+<details>
+<summary><b>Cursor</b></summary>
 
-  # Windows
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
+Add to `~/.cursor/mcp.json`:
 
-  # Or via pip
-  pip install uv
-  ```
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
 
-- Port 5077 available (Panel display server)
+</details>
+
+<details>
+<summary><b>Claude Code / Other stdio clients</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+</details>
 
 ---
 
-## What it does
+## Development Setup
 
-- Ask your AI assistant to create a chart — it renders **inline in the chat**
-- Charts are interactive (zoom, pan, hover) powered by Bokeh
-- Every visualization is persisted and accessible via URL
-- Works in VS Code Insiders (Copilot), Claude Desktop, and Cursor
-
----
-
-## Requirements
-
-- Python 3.11+
-- [Pixi](https://pixi.sh) — environment manager
-
----
-
-## Installation
+For contributing or running from source:
 
 ### 1. Install Pixi
 
@@ -279,8 +302,8 @@ source ~/.bashrc
 ### 2. Clone and install
 
 ```bash
-git clone <your-repo-url>
-cd Panel-mcp-live
+git clone https://github.com/SuMayaBee/HoloViz-MCP-Server
+cd HoloViz-MCP-Server
 
 pixi install
 pixi run postinstall
@@ -290,97 +313,6 @@ pixi run postinstall
 
 ```bash
 .pixi/envs/default/bin/hvmcp --version
-```
-
----
-
-## VS Code Setup (Insiders)
-
-VS Code Insiders supports inline MCP App rendering — charts appear directly inside the chat panel.
-
-### Step 1 — Install VS Code Insiders
-
-Download from [code.visualstudio.com/insiders](https://code.visualstudio.com/insiders). Make sure the **GitHub Copilot** extension is installed and you are signed in.
-
-### Step 2 — Create the MCP config
-
-Create `.vscode/mcp.json` in your workspace root (this repo already has one):
-
-```json
-{
-  "servers": {
-    "holoviz": {
-      "type": "stdio",
-      "command": "/absolute/path/to/Panel-mcp-live/.pixi/envs/default/bin/hvmcp",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-> Replace `/absolute/path/to/Panel-mcp-live` with the actual path on your machine.
-> On Linux/Mac you can get it by running `pwd` inside the project folder.
-
-### Step 3 — Start the server
-
-1. Open `.vscode/mcp.json` in VS Code Insiders
-2. You will see **Start | Stop | Restart | 22 tools** links appear inline above the `"servers"` line
-3. Click **Start**
-
-The server starts automatically — no terminal commands needed. It will:
-
-- Launch the MCP server (`hvmcp mcp`)
-- Auto-start the Panel display server subprocess on port 5077
-- Print `HoloViz MCP App is running. Feed: http://127.0.0.1:5077/feed` in the MCP output log
-
-### Step 4 — Open Copilot Chat in Agent mode
-
-1. Open Copilot Chat: `Ctrl+Alt+I`
-2. Switch to **Agent** mode using the dropdown at the bottom of the chat
-3. Make sure `mcp.json` is listed as a context source (the `{}` icon at the bottom)
-
-### Step 5 — Try it
-
-```
-Create a bar chart showing: Jan=120, Feb=95, Mar=140, Apr=110
-```
-
-A bar chart renders inline in the chat. Click **Open visualization** to open it in Simple Browser inside VS Code.
-
----
-
-## Claude Desktop Setup
-
-Add to `~/.config/Claude/claude_desktop_config.json` (create if it doesn't exist):
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "/absolute/path/to/Panel-mcp-live/.pixi/envs/default/bin/hvmcp",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-Restart Claude Desktop. The server starts automatically when Claude launches.
-
----
-
-## Cursor Setup
-
-Create or edit `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "/absolute/path/to/Panel-mcp-live/.pixi/envs/default/bin/hvmcp",
-      "args": ["mcp"]
-    }
-  }
-}
 ```
 
 ---
