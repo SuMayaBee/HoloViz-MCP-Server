@@ -80,56 +80,6 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel
 
 ---
 
-## Installation
-
-### VS Code / Cursor
-
-Add to your `mcp.json` (or `.vscode/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}
-```
-
-### Requirements
-
-- Python 3.11+
-- `uv` — required to run `uvx`. Install it first:
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-
-  # Windows
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
-
-  # Or via pip
-  pip install uv
-  ```
-- Port 5077 available (Panel display server)
-
----
-
 ## Architecture
 
 This project is designed as an MCP-native visualization platform: LLMs call tools, the server validates and executes visualization code safely, and users get live, interactive UIs inline in chat.
@@ -257,6 +207,58 @@ This directly implements the GSoC idea of "Panel / HoloViews MCP Integration" by
 - Extensible design: namespaced tools (`viz`, `pn`, `hvplot`, `hv`) keep growth manageable for future capabilities.
 
 In short, the project turns HoloViz into a first-class interactive runtime for agent conversations, which is exactly the core value proposed in the GSoC problem statement.
+
+---
+
+## Installation
+
+### VS Code / Cursor
+
+Add to your `mcp.json` (or `.vscode/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+### Requirements
+
+- Python 3.11+
+- `uv` — required to run `uvx`. Install it first:
+
+  ```bash
+  # macOS / Linux
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  # Windows
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
+
+  # Or via pip
+  pip install uv
+  ```
+
+- Port 5077 available (Panel display server)
 
 ---
 
