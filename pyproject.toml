@@ -38,6 +38,7 @@ dependencies = [
     "ruff",
     "kaggle>=1.6",
     "huggingface_hub>=0.20",
+    "datashader>=0.16",
 ]
 
 [project.urls]

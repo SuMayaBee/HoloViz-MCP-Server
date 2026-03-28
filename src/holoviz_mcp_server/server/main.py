@@ -587,6 +587,95 @@ def _resolve_huggingface_source(source: str) -> str | dict:
         return {"error": f"HuggingFace download failed: {e}", "source": source}
 
 
+def _recommend_charts(profile: dict) -> list[dict]:
+    """Analyse a dataset profile and return up to 3 chart recommendations with ready-to-run code."""
+    source = profile["source"]
+    rows = profile["shape"]["rows"]
+    columns = profile["columns"]
+
+    numeric_cols = [c["name"] for c in columns if c["dtype"] in ("int64", "float64", "int32", "float32")]
+    categorical_cols = [c["name"] for c in columns if c["dtype"] in ("object", "category", "bool") and c["unique"] < 50]
+    datetime_cols = [
+        c["name"]
+        for c in columns
+        if "datetime" in c["dtype"] or any(k in c["name"].lower() for k in ("date", "time", "year", "month"))
+    ]
+
+    # Use datashade=True for large datasets automatically
+    large = rows > 100_000
+    datashade_arg = ", datashade=True" if large else ""
+
+    # Detect file reader
+    src_lower = source.lower()
+    if src_lower.endswith(".parquet"):
+        reader = f'pd.read_parquet("{source}")'
+    elif src_lower.endswith(".tsv"):
+        reader = f'pd.read_csv("{source}", sep="\\t")'
+    else:
+        reader = f'pd.read_csv("{source}")'
+
+    recs: list[dict] = []
+
+    # 1. Time series line chart
+    if datetime_cols and numeric_cols:
+        t, v = datetime_cols[0], numeric_cols[0]
+        recs.append({
+            "type": "line",
+            "title": f"{v} over time",
+            "reason": f"Datetime column '{t}' + numeric column '{v}' detected",
+            "code": (
+                f"import pandas as pd\nimport hvplot.pandas\n"
+                f'df = {reader}\ndf["{t}"] = pd.to_datetime(df["{t}"])\n'
+                f'df.hvplot.line(x="{t}", y="{v}"{datashade_arg}, title="{v} over time")'
+            ),
+        })
+
+    # 2. Scatter for numeric pairs
+    if len(numeric_cols) >= 2:
+        x, y = numeric_cols[0], numeric_cols[1]
+        color_arg = f', by="{categorical_cols[0]}"' if categorical_cols else ""
+        recs.append({
+            "type": "scatter",
+            "title": f"{x} vs {y}",
+            "reason": f"Two numeric columns '{x}' and '{y}' detected",
+            "code": (
+                f"import pandas as pd\nimport hvplot.pandas\n"
+                f"df = {reader}\n"
+                f'df.hvplot.scatter(x="{x}", y="{y}"{color_arg}{datashade_arg}, title="{x} vs {y}")'
+            ),
+        })
+
+    # 3. Bar for categorical + numeric
+    if categorical_cols and numeric_cols:
+        cat, val = categorical_cols[0], numeric_cols[0]
+        recs.append({
+            "type": "bar",
+            "title": f"{val} by {cat}",
+            "reason": f"Categorical column '{cat}' + numeric column '{val}' detected",
+            "code": (
+                f"import pandas as pd\nimport hvplot.pandas\n"
+                f"df = {reader}\n"
+                f'df.groupby("{cat}")["{val}"].mean().hvplot.bar(title="{val} by {cat}", rot=45)'
+            ),
+        })
+
+    # 4. Histogram fallback
+    if len(recs) < 3 and numeric_cols:
+        val = numeric_cols[0]
+        recs.append({
+            "type": "histogram",
+            "title": f"Distribution of {val}",
+            "reason": f"Numeric column '{val}' available for distribution analysis",
+            "code": (
+                f"import pandas as pd\nimport hvplot.pandas\n"
+                f"df = {reader}\n"
+                f'df.hvplot.hist("{val}", bins=30, title="Distribution of {val}")'
+            ),
+        })
+
+    return recs[:3]
+
+
 @mcp.tool(name="load_data")
 async def load_data(
     source: str,
@@ -638,9 +727,10 @@ async def load_data(
         else:
             df = pd.read_csv(source)
 
+        rows = len(df)
         profile = {
             "source": source,
-            "shape": {"rows": len(df), "columns": len(df.columns)},
+            "shape": {"rows": rows, "columns": len(df.columns)},
             "columns": [],
         }
 
@@ -657,6 +747,17 @@ async def load_data(
                 col_info["max"] = float(df[col].max())
                 col_info["mean"] = float(df[col].mean())
             profile["columns"].append(col_info)
+
+        # Auto chart recommendations based on column types
+        profile["recommendations"] = _recommend_charts(profile)
+
+        # Flag large datasets so the LLM knows to use datashader
+        if rows > 100_000:
+            profile["large_dataset"] = True
+            profile["datashader_note"] = (
+                f"Dataset has {rows:,} rows. Use datashade=True in hvplot calls for performance. "
+                "Example: df.hvplot.scatter(x='col1', y='col2', datashade=True)"
+            )
 
         return json.dumps(profile)
 
