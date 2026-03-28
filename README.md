@@ -16,7 +16,7 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel
 [![Python](https://img.shields.io/pypi/pyversions/holoviz-mcp-server)](https://pypi.org/project/holoviz-mcp-server/)
 [![License](https://img.shields.io/pypi/l/holoviz-mcp-server)](LICENSE)
 
-**30+ MCP tools · 7 chart categories · 4 interactive UI templates · live streaming · bidirectional interaction**
+**27 MCP tools · 4 interactive UI templates · live streaming · bidirectional interaction**
 
 </div>
 
