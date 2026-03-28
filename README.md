@@ -196,17 +196,6 @@ flowchart TB
    - a Panel URL rendered in an iframe.
 6. MCP App templates provide rich UX (filters, theme toggle, exports, click-to-insight).
 
-### Why this architecture is a strong GSoC fit
-
-This directly implements the GSoC idea of "Panel / HoloViews MCP Integration" by delivering:
-
-- MCP Apps-first UX: visualizations are returned as interactive UI resources, not plain text.
-- Agent-native workflows: LLMs can create, modify, filter, annotate, and export visual outputs.
-- Safe execution model: multi-layer validation plus controlled subprocess execution.
-- Real interoperability: works across major MCP clients and supports local/remote data sources.
-- Extensible design: namespaced tools (`viz`, `pn`, `hvplot`, `hv`) keep growth manageable for future capabilities.
-
-In short, the project turns HoloViz into a first-class interactive runtime for agent conversations, which is exactly the core value proposed in the GSoC problem statement.
 
 ---
 
