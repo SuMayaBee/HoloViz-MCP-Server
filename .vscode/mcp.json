@@ -2,8 +2,8 @@
   "servers": {
     "holoviz": {
       "type": "stdio",
-      "command": "/home/sumaiya/Desktop/Panel-mcp-live/.pixi/envs/default/bin/hvmcp",
-      "args": ["mcp"]
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
     }
   }
 }

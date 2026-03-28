@@ -13,7 +13,9 @@ startCommand:
     (config) => ({
       command: "uvx",
       args: [
+        "--from",
         "holoviz-mcp-server",
+        "hvmcp",
         "mcp"
       ],
       env: {

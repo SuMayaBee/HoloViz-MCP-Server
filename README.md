@@ -17,7 +17,7 @@ Add to your `mcp.json` (or `.vscode/mcp.json`):
   "mcpServers": {
     "holoviz": {
       "command": "uvx",
-      "args": ["holoviz-mcp-server", "mcp"]
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
     }
   }
 }
@@ -32,7 +32,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "holoviz": {
       "command": "uvx",
-      "args": ["holoviz-mcp-server", "mcp"]
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
     }
   }
 }
