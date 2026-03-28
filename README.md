@@ -100,16 +100,16 @@ flowchart TB
 
 ### Layer responsibilities
 
-| Layer | Responsibility | Key implementation modules |
-|------|----------------|----------------------------|
-| LLM Client Layer | Hosts the chat UX and invokes MCP tools | VS Code Copilot, Claude Desktop, Cursor |
-| MCP Orchestration | Defines tool surface and namespaces | `server/main.py`, `server/compose.py`, `server/guided_mcp.py` |
-| Validation and Safety | Enforces secure code execution before rendering | `validation.py`, `utils.py`, `display/database.py` |
-| Display Runtime | Runs Panel as managed subprocess, serves rendered apps | `display/manager.py`, `display/app.py`, `display/endpoints.py` |
-| Persistence | Stores every snippet and execution metadata for replay/debug/search | `display/database.py` |
-| MCP App UI | Renders interactive outputs inline in chat sandboxes | `templates/show.html`, `templates/dashboard.html`, `templates/stream.html`, `templates/multi.html` |
-| HoloViz Stack | Visualization abstraction and rendering backend | Panel, HoloViews, hvPlot, Bokeh, Param |
-| Data Layer | Ingestion and profiling for local and remote datasets | `load_data()` tool in `server/main.py` |
+| Layer                 | Responsibility                                                      | Key implementation modules                                                                         |
+| --------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| LLM Client Layer      | Hosts the chat UX and invokes MCP tools                             | VS Code Copilot, Claude Desktop, Cursor                                                            |
+| MCP Orchestration     | Defines tool surface and namespaces                                 | `server/main.py`, `server/compose.py`, `server/guided_mcp.py`                                      |
+| Validation and Safety | Enforces secure code execution before rendering                     | `validation.py`, `utils.py`, `display/database.py`                                                 |
+| Display Runtime       | Runs Panel as managed subprocess, serves rendered apps              | `display/manager.py`, `display/app.py`, `display/endpoints.py`                                     |
+| Persistence           | Stores every snippet and execution metadata for replay/debug/search | `display/database.py`                                                                              |
+| MCP App UI            | Renders interactive outputs inline in chat sandboxes                | `templates/show.html`, `templates/dashboard.html`, `templates/stream.html`, `templates/multi.html` |
+| HoloViz Stack         | Visualization abstraction and rendering backend                     | Panel, HoloViews, hvPlot, Bokeh, Param                                                             |
+| Data Layer            | Ingestion and profiling for local and remote datasets               | `load_data()` tool in `server/main.py`                                                             |
 
 ### End-to-end flow
 
@@ -213,6 +213,7 @@ Create `.vscode/mcp.json` in your workspace root (this repo already has one):
 3. Click **Start**
 
 The server starts automatically — no terminal commands needed. It will:
+
 - Launch the MCP server (`hvmcp mcp`)
 - Auto-start the Panel display server subprocess on port 5077
 - Print `HoloViz MCP App is running. Feed: http://127.0.0.1:5077/feed` in the MCP output log
@@ -272,16 +273,19 @@ Create or edit `~/.cursor/mcp.json`:
 ## Example Prompts
 
 **Simple chart:**
+
 ```
 Create a bar chart showing: Jan=120, Feb=95, Mar=140, Apr=110
 ```
 
 **Scatter plot:**
+
 ```
 Show a scatter plot of 50 random points using hvplot
 ```
 
 **Full dashboard:**
+
 ```
 Create a dashboard with this sales data:
 products=[Apples, Bananas, Oranges, Grapes],
@@ -290,16 +294,19 @@ units=[50, 30, 45, 20]
 ```
 
 **Load a dataset:**
+
 ```
 Load /path/to/data.csv and create a visualization
 ```
 
 **Live streaming chart:**
+
 ```
 Create a live streaming chart that updates every second with random values
 ```
 
 **Explore available tools:**
+
 ```
 What hvplot chart types are available?
 What Panel widgets are available?
@@ -310,21 +317,21 @@ Show me the hvplot skill guide
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `show(code)` | Execute Python viz code, render as live UI |
-| `stream(code)` | Execute streaming Panel code with periodic callbacks |
-| `load_data(source)` | Profile a dataset (CSV, Parquet, JSON, S3, etc.) |
-| `validate(code)` | Run 5-layer validation before show() |
-| `viz.create` | High-level: describe a chart in plain config, no Python needed |
-| `viz.dashboard` | Create a multi-panel dashboard from structured config |
-| `viz.stream` | Create a live streaming visualization |
-| `viz.multi` | Create a multi-chart grid with linked selections |
-| `pn.list / pn.get / pn.params / pn.search` | Panel component introspection |
-| `hvplot.list / hvplot.get` | hvPlot chart type discovery |
-| `hv.list / hv.get` | HoloViews element discovery |
-| `skill_list / skill_get` | Access best-practice guides for Panel, hvPlot, HoloViews |
-| `list_packages` | List installed packages in the server environment |
+| Tool                                       | Description                                                    |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| `show(code)`                               | Execute Python viz code, render as live UI                     |
+| `stream(code)`                             | Execute streaming Panel code with periodic callbacks           |
+| `load_data(source)`                        | Profile a dataset (CSV, Parquet, JSON, S3, etc.)               |
+| `validate(code)`                           | Run 5-layer validation before show()                           |
+| `viz.create`                               | High-level: describe a chart in plain config, no Python needed |
+| `viz.dashboard`                            | Create a multi-panel dashboard from structured config          |
+| `viz.stream`                               | Create a live streaming visualization                          |
+| `viz.multi`                                | Create a multi-chart grid with linked selections               |
+| `pn.list / pn.get / pn.params / pn.search` | Panel component introspection                                  |
+| `hvplot.list / hvplot.get`                 | hvPlot chart type discovery                                    |
+| `hv.list / hv.get`                         | HoloViews element discovery                                    |
+| `skill_list / skill_get`                   | Access best-practice guides for Panel, hvPlot, HoloViews       |
+| `list_packages`                            | List installed packages in the server environment              |
 
 ---
 
@@ -382,14 +389,14 @@ src/holoviz_mcp_server/
 
 All variables use the `HOLOVIZ_MCP_SERVER_` prefix.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `5077` | Panel server port |
-| `HOST` | `127.0.0.1` | Panel server host |
-| `MAX_RESTARTS` | `3` | Max Panel subprocess restart attempts |
-| `DB_PATH` | `~/.holoviz-mcp-server/snippets/snippets.db` | SQLite database path |
-| `EXTERNAL_URL` | *(auto)* | Public URL override (JupyterHub / Codespaces) |
-| `SKILLS_DIR` | *(builtin)* | Path to custom skills directory |
+| Variable       | Default                                      | Description                                   |
+| -------------- | -------------------------------------------- | --------------------------------------------- |
+| `PORT`         | `5077`                                       | Panel server port                             |
+| `HOST`         | `127.0.0.1`                                  | Panel server host                             |
+| `MAX_RESTARTS` | `3`                                          | Max Panel subprocess restart attempts         |
+| `DB_PATH`      | `~/.holoviz-mcp-server/snippets/snippets.db` | SQLite database path                          |
+| `EXTERNAL_URL` | _(auto)_                                     | Public URL override (JupyterHub / Codespaces) |
+| `SKILLS_DIR`   | _(builtin)_                                  | Path to custom skills directory               |
 
 Auto-detects JupyterHub (`JUPYTERHUB_SERVICE_PREFIX`) and GitHub Codespaces (`CODESPACE_NAME`) to build the correct external URL.
 
