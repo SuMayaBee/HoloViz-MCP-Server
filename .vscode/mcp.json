@@ -1,9 +1,0 @@
-{
-  "servers": {
-    "holoviz": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}

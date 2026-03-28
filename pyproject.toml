@@ -36,6 +36,8 @@ dependencies = [
     "requests",
     "typer",
     "ruff",
+    "kaggle>=1.6",
+    "huggingface_hub>=0.20",
 ]
 
 [project.urls]

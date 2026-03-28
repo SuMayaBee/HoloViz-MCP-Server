@@ -36,6 +36,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# MCP config (may contain API keys)
+.vscode/mcp.json
+.cursor/mcp.json
+
 # Testing
 .pytest_cache/
 .coverage

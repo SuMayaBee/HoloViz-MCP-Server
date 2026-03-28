@@ -64,7 +64,21 @@
 <body>
   <div class="toolbar" id="toolbar" style="display:none;">
     <button class="toolbar-btn" id="btn-theme">Dark Mode</button>
+    <button class="toolbar-btn" id="btn-code" style="display:none;" onclick="showCode()">View Code</button>
     <div class="spacer"></div>
+  </div>
+
+  <div id="code-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;width:85%;max-height:80%;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:13px;color:#94a3b8;">Python Code</span>
+        <div style="display:flex;gap:6px;">
+          <button class="toolbar-btn" onclick="copyCode()">Copy</button>
+          <button class="toolbar-btn" onclick="document.getElementById('code-modal').style.display='none'">Close</button>
+        </div>
+      </div>
+      <pre id="code-display" style="background:#0f172a;color:#e2e8f0;padding:12px;border-radius:4px;font-size:12px;font-family:monospace;white-space:pre-wrap;overflow-x:auto;border:1px solid #334155;"></pre>
+    </div>
   </div>
 
   <div id="chart-container">
@@ -81,6 +95,20 @@
 
     const app = new App({ name: "HoloViz MCP App", version: "0.1.0" });
     const chartContainer = document.getElementById("chart-container");
+    let currentCode = "";
+
+    window.showCode = () => {
+      document.getElementById("code-display").textContent = currentCode;
+      document.getElementById("code-modal").style.display = "flex";
+    };
+    window.copyCode = () => {
+      navigator.clipboard.writeText(currentCode).then(() => {
+        const btn = document.querySelector("#code-modal .toolbar-btn");
+        const orig = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      });
+    };
 
     function clearChart() {
       if (window.Bokeh && Bokeh.index) {
@@ -217,6 +245,10 @@
 
       if (result.action === "create" || result.action === "update") {
         currentVizId = result.viz_id || result.id || null;
+        if (result.code) {
+          currentCode = result.code;
+          document.getElementById("btn-code").style.display = "inline-block";
+        }
         document.getElementById("toolbar").style.display = "flex";
         clearChart();
         chartContainer.innerHTML = '<div class="loading"><div class="spinner"></div><span>Rendering chart...</span></div>';
@@ -231,6 +263,10 @@
 
       } else if (result.action === "panel_url" && result.url) {
         currentVizId = result.viz_id || null;
+        if (result.code) {
+          currentCode = result.code;
+          document.getElementById("btn-code").style.display = "inline-block";
+        }
         document.getElementById("toolbar").style.display = "flex";
         chartContainer.innerHTML = "";
         const frame = document.createElement("iframe");

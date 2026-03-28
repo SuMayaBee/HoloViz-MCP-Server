@@ -286,6 +286,35 @@ Add to `~/.cursor/mcp.json`:
 
 </details>
 
+### Optional: Kaggle & HuggingFace Integration
+
+To load datasets directly from Kaggle or HuggingFace URLs, add credentials to the `env` section of your config:
+
+```json
+{
+  "env": {
+    "KAGGLE_USERNAME": "your_kaggle_username",
+    "KAGGLE_KEY": "your_kaggle_api_key",
+    "HF_TOKEN": "your_huggingface_token"
+  }
+}
+```
+
+- **Kaggle token**: [kaggle.com](https://www.kaggle.com) → Account → Settings → **Create New Token**
+- **HuggingFace token**: [huggingface.co](https://huggingface.co) → Settings → Access Tokens → **New token** (Read role)
+
+`HF_TOKEN` is optional — only needed for private HuggingFace datasets. If credentials are not provided, Kaggle/HuggingFace URLs will return a friendly message instead of failing silently.
+
+**Example prompts once configured:**
+
+```text
+Load https://www.kaggle.com/datasets/uciml/iris and show a scatter plot colored by species
+```
+
+```text
+Load https://huggingface.co/datasets/scikit-learn/iris and show a correlation heatmap
+```
+
 ---
 
 ## Development Setup
@@ -321,19 +350,19 @@ pixi run postinstall
 
 **Simple chart:**
 
-```
+```text
 Create a bar chart showing: Jan=120, Feb=95, Mar=140, Apr=110
 ```
 
 **Scatter plot:**
 
-```
+```text
 Show a scatter plot of 50 random points using hvplot
 ```
 
 **Full dashboard:**
 
-```
+```text
 Create a dashboard with this sales data:
 products=[Apples, Bananas, Oranges, Grapes],
 revenue=[500, 300, 450, 200],
@@ -342,19 +371,19 @@ units=[50, 30, 45, 20]
 
 **Load a dataset:**
 
-```
+```text
 Load /path/to/data.csv and create a visualization
 ```
 
 **Live streaming chart:**
 
-```
+```text
 Create a live streaming chart that updates every second with random values
 ```
 
 **Explore available tools:**
 
-```
+```text
 What hvplot chart types are available?
 What Panel widgets are available?
 Show me the hvplot skill guide
