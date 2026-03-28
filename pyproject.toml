@@ -23,10 +23,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-[project.urls]
-Homepage = "https://github.com/SuMayaBee/HoloViz-MCP-Server"
-Repository = "https://github.com/SuMayaBee/HoloViz-MCP-Server"
-Issues = "https://github.com/SuMayaBee/HoloViz-MCP-Server/issues"
 dependencies = [
     "fastmcp>=3.0",
     "panel>=1.5.0",
@@ -41,6 +37,11 @@ dependencies = [
     "typer",
     "ruff",
 ]
+
+[project.urls]
+Homepage = "https://github.com/SuMayaBee/HoloViz-MCP-Server"
+Repository = "https://github.com/SuMayaBee/HoloViz-MCP-Server"
+Issues = "https://github.com/SuMayaBee/HoloViz-MCP-Server/issues"
 
 [project.optional-dependencies]
 dev = [
