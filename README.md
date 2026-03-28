@@ -6,6 +6,46 @@ Built on Panel, HoloViews, hvPlot, and FastMCP.
 
 ---
 
+## Installation
+
+### VS Code / Cursor
+
+Add to your `mcp.json` (or `.vscode/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["holoviz-mcp-server", "mcp"]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["holoviz-mcp-server", "mcp"]
+    }
+  }
+}
+```
+
+### Requirements
+
+- Python 3.11+
+- `uvx` (install via `pip install uv`)
+- Port 5077 available (Panel display server)
+
+---
+
 ## Architecture
 
 This project is designed as an MCP-native visualization platform: LLMs call tools, the server validates and executes visualization code safely, and users get live, interactive UIs inline in chat.
