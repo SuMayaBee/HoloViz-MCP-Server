@@ -54,3 +54,6 @@ htmlcov/
 CLAUDE.md
 .claude/
 Gsoc_Idea.txt
+
+# External context (personal/private files)
+external context/

@@ -196,7 +196,6 @@ flowchart TB
    - a Panel URL rendered in an iframe.
 6. MCP App templates provide rich UX (filters, theme toggle, exports, click-to-insight).
 
-
 ---
 
 ## Development Setup
@@ -506,3 +505,4 @@ Load https://huggingface.co/datasets/scikit-learn/iris and show a correlation he
 ## License
 
 BSD 3-Clause
+
