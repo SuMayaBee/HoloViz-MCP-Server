@@ -199,124 +199,6 @@ flowchart TB
 
 ---
 
-## Installation
-
-> **Prerequisite:** Install [`uv`](https://docs.astral.sh/uv/) first:
-> ```bash
-> # macOS / Linux
-> curl -LsSf https://astral.sh/uv/install.sh | sh
-> # Windows
-> powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
-> # Or via pip
-> pip install uv
-> ```
-
-<details>
-<summary><b>VS Code / Copilot Chat (Recommended)</b></summary>
-
-Add to your global `~/.config/Code - Insiders/User/mcp.json` or workspace `.vscode/mcp.json`:
-
-```json
-{
-  "servers": {
-    "holoviz": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}
-```
-
-Open Copilot Chat (`Ctrl+Alt+I`) → switch to **Agent** mode → start chatting.
-
-</details>
-
-<details>
-<summary><b>Claude Desktop</b></summary>
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}
-```
-
-Restart Claude Desktop.
-
-</details>
-
-<details>
-<summary><b>Cursor</b></summary>
-
-Add to `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Claude Code / Other stdio clients</b></summary>
-
-```json
-{
-  "mcpServers": {
-    "holoviz": {
-      "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
-    }
-  }
-}
-```
-
-</details>
-
-### Optional: Kaggle & HuggingFace Integration
-
-To load datasets directly from Kaggle or HuggingFace URLs, add credentials to the `env` section of your config:
-
-```json
-{
-  "env": {
-    "KAGGLE_USERNAME": "your_kaggle_username",
-    "KAGGLE_KEY": "your_kaggle_api_key",
-    "HF_TOKEN": "your_huggingface_token"
-  }
-}
-```
-
-- **Kaggle token**: [kaggle.com](https://www.kaggle.com) → Account → Settings → **Create New Token**
-- **HuggingFace token**: [huggingface.co](https://huggingface.co) → Settings → Access Tokens → **New token** (Read role)
-
-`HF_TOKEN` is optional — only needed for private HuggingFace datasets. If credentials are not provided, Kaggle/HuggingFace URLs will return a friendly message instead of failing silently.
-
-**Example prompts once configured:**
-
-```text
-Load https://www.kaggle.com/datasets/uciml/iris and show a scatter plot colored by species
-```
-
-```text
-Load https://huggingface.co/datasets/scikit-learn/iris and show a correlation heatmap
-```
-
----
-
 ## Development Setup
 
 For contributing or running from source:
@@ -499,6 +381,124 @@ src/holoviz_mcp_server/
     ├── holoviews/
     ├── param/
     └── data/
+```
+
+---
+
+## Installation
+
+> **Prerequisite:** Install [`uv`](https://docs.astral.sh/uv/) first:
+> ```bash
+> # macOS / Linux
+> curl -LsSf https://astral.sh/uv/install.sh | sh
+> # Windows
+> powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.sh | iex"
+> # Or via pip
+> pip install uv
+> ```
+
+<details>
+<summary><b>VS Code / Copilot Chat (Recommended)</b></summary>
+
+Add to your global `~/.config/Code - Insiders/User/mcp.json` or workspace `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "holoviz": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+Open Copilot Chat (`Ctrl+Alt+I`) → switch to **Agent** mode → start chatting.
+
+</details>
+
+<details>
+<summary><b>Claude Desktop</b></summary>
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop.
+
+</details>
+
+<details>
+<summary><b>Cursor</b></summary>
+
+Add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Code / Other stdio clients</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "holoviz": {
+      "command": "uvx",
+      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+    }
+  }
+}
+```
+
+</details>
+
+### Optional: Kaggle & HuggingFace Integration
+
+To load datasets directly from Kaggle or HuggingFace URLs, add credentials to the `env` section of your config:
+
+```json
+{
+  "env": {
+    "KAGGLE_USERNAME": "your_kaggle_username",
+    "KAGGLE_KEY": "your_kaggle_api_key",
+    "HF_TOKEN": "your_huggingface_token"
+  }
+}
+```
+
+- **Kaggle token**: [kaggle.com](https://www.kaggle.com) → Account → Settings → **Create New Token**
+- **HuggingFace token**: [huggingface.co](https://huggingface.co) → Settings → Access Tokens → **New token** (Read role)
+
+`HF_TOKEN` is optional — only needed for private HuggingFace datasets. If credentials are not provided, Kaggle/HuggingFace URLs will return a friendly message instead of failing silently.
+
+**Example prompts once configured:**
+
+```text
+Load https://www.kaggle.com/datasets/uciml/iris and show a scatter plot colored by species
+```
+
+```text
+Load https://huggingface.co/datasets/scikit-learn/iris and show a correlation heatmap
 ```
 
 ---
