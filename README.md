@@ -391,23 +391,65 @@ Show me the hvplot skill guide
 
 ---
 
+## Features
+
+### Core Visualization
+- Ask your AI assistant to create a chart — renders **inline in the chat** via MCP Apps
+- Interactive charts (zoom, pan, hover) powered by Bokeh
+- Every visualization persisted and accessible via URL
+- Works in VS Code Insiders, Claude Desktop, and Cursor
+
+### View Code Button
+Every chart rendered inline has a **View Code** button in the toolbar — click it to see the exact Python that generated the visualization, with a one-click copy. Great for learning HoloViz.
+
+### Kaggle Integration
+Paste any Kaggle dataset or competition URL directly into the chat:
+```text
+Load https://www.kaggle.com/datasets/uciml/iris and show a scatter plot colored by species
+```
+Requires `KAGGLE_USERNAME` and `KAGGLE_KEY` in your MCP config env (free Kaggle account).
+
+### HuggingFace Datasets
+Paste any HuggingFace dataset URL and get instant EDA:
+```text
+Load https://huggingface.co/datasets/scikit-learn/iris and show a correlation heatmap
+```
+`HF_TOKEN` is optional — only needed for private datasets.
+
+### Automatic Chart Recommendations
+After `load_data()`, the server analyses column types and returns up to 3 ready-to-render chart recommendations with working hvplot code — no manual chart selection needed.
+
+### Datashader for Big Data
+Datasets with >100k rows automatically use `datashade=True` in all recommended chart code — rendering stays fast regardless of dataset size.
+
+### Live Streaming Dashboards
+Real-time dashboards with periodic callbacks — sine waves, counters, live feeds — all rendered inline.
+
+### Maps
+Interactive tile maps using hvPlot + GeoViews:
+```text
+Plot the top 10 most populous cities on an interactive map with population as point size
+```
+
+---
+
 ## Tools
 
-| Tool                                       | Description                                                    |
-| ------------------------------------------ | -------------------------------------------------------------- |
-| `show(code)`                               | Execute Python viz code, render as live UI                     |
-| `stream(code)`                             | Execute streaming Panel code with periodic callbacks           |
-| `load_data(source)`                        | Profile a dataset (CSV, Parquet, JSON, S3, etc.)               |
-| `validate(code)`                           | Run 5-layer validation before show()                           |
-| `viz.create`                               | High-level: describe a chart in plain config, no Python needed |
-| `viz.dashboard`                            | Create a multi-panel dashboard from structured config          |
-| `viz.stream`                               | Create a live streaming visualization                          |
-| `viz.multi`                                | Create a multi-chart grid with linked selections               |
-| `pn.list / pn.get / pn.params / pn.search` | Panel component introspection                                  |
-| `hvplot.list / hvplot.get`                 | hvPlot chart type discovery                                    |
-| `hv.list / hv.get`                         | HoloViews element discovery                                    |
-| `skill_list / skill_get`                   | Access best-practice guides for Panel, hvPlot, HoloViews       |
-| `list_packages`                            | List installed packages in the server environment              |
+| Tool                                       | Description                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `show(code)`                               | Execute Python viz code, render as live UI with View Code button                     |
+| `stream(code)`                             | Execute streaming Panel code with periodic callbacks                                 |
+| `load_data(source)`                        | Profile a dataset + auto chart recommendations. Supports CSV, Parquet, Kaggle, HuggingFace, S3 |
+| `validate(code)`                           | Run 5-layer validation before show()                                                 |
+| `viz.create`                               | High-level: describe a chart in plain config, no Python needed                       |
+| `viz.dashboard`                            | Create a multi-panel dashboard from structured config                                |
+| `viz.stream`                               | Create a live streaming visualization                                                |
+| `viz.multi`                                | Create a multi-chart grid with linked selections                                     |
+| `pn.list / pn.get / pn.params / pn.search` | Panel component introspection                                                        |
+| `hvplot.list / hvplot.get`                 | hvPlot chart type discovery                                                          |
+| `hv.list / hv.get`                         | HoloViews element discovery                                                          |
+| `skill_list / skill_get`                   | Access best-practice guides for Panel, hvPlot, HoloViews                             |
+| `list_packages`                            | List installed packages in the server environment                                    |
 
 ---
 
