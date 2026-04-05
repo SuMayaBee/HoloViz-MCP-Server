@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "holoviz-mcp-server"
+name = "hvmcp"
 dynamic = ["version"]
 description = "MCP server for HoloViz ecosystem — interactive visualizations and dashboards rendered as MCP Apps in AI chat."
 readme = "README.md"
@@ -56,10 +56,10 @@ huggingface = [
     "huggingface_hub>=0.20",
 ]
 all = [
-    "holoviz-mcp-server[geo]",
-    "holoviz-mcp-server[bigdata]",
-    "holoviz-mcp-server[kaggle]",
-    "holoviz-mcp-server[huggingface]",
+    "hvmcp[geo]",
+    "hvmcp[bigdata]",
+    "hvmcp[kaggle]",
+    "hvmcp[huggingface]",
 ]
 dev = [
     "pytest",
