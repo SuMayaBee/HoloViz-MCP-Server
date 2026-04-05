@@ -3,6 +3,6 @@
 try:
     from importlib.metadata import version
 
-    __version__ = version("holoviz-mcp-server")
+    __version__ = version("hvmcp")
 except Exception:
     __version__ = "0.1.0"

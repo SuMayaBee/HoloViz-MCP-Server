@@ -509,7 +509,7 @@ def _resolve_kaggle_source(source: str) -> str | dict:
     try:
         import kaggle  # noqa: PLC0415
     except ImportError:
-        return {"error": "kaggle package is not installed. Reinstall with the 'kaggle' extra: uvx --from \"holoviz-mcp-server[kaggle]\" hvmcp mcp", "source": source}
+        return {"error": "kaggle package is not installed. Reinstall with the 'kaggle' extra: uvx --from \"hvmcp[kaggle]\" hvmcp mcp", "source": source}
 
     download_dir = tempfile.mkdtemp(prefix="holoviz_kaggle_")
 
@@ -561,7 +561,7 @@ def _resolve_huggingface_source(source: str) -> str | dict:
         from huggingface_hub import list_repo_files  # noqa: PLC0415
         from huggingface_hub import hf_hub_download  # noqa: PLC0415
     except ImportError:
-        return {"error": "huggingface_hub package is not installed. Reinstall with the 'huggingface' extra: uvx --from \"holoviz-mcp-server[huggingface]\" hvmcp mcp", "source": source}
+        return {"error": "huggingface_hub package is not installed. Reinstall with the 'huggingface' extra: uvx --from \"hvmcp[huggingface]\" hvmcp mcp", "source": source}
 
     try:
         download_dir = tempfile.mkdtemp(prefix="holoviz_hf_")

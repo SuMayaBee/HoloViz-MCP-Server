@@ -197,7 +197,7 @@ def check_packages(code: str) -> str | None:
                 return (
                     f"Package '{package_name}' is not installed. "
                     f"Reinstall with the '{extra}' extra: "
-                    f"uvx --from \"holoviz-mcp-server[{extra}]\" hvmcp mcp"
+                    f"uvx --from \"hvmcp[{extra}]\" hvmcp mcp"
                 )
             return (
                 f"Package '{package_name}' is not installed. "

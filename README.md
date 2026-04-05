@@ -12,9 +12,9 @@
 
 Built with [FastMCP](https://github.com/jlowin/fastmcp) · [Panel](https://panel.holoviz.org) · [HoloViews](https://holoviews.org) · [hvPlot](https://hvplot.holoviz.org) · [Bokeh](https://bokeh.org)
 
-[![PyPI](https://img.shields.io/pypi/v/holoviz-mcp-server)](https://pypi.org/project/holoviz-mcp-server/)
-[![Python](https://img.shields.io/pypi/pyversions/holoviz-mcp-server)](https://pypi.org/project/holoviz-mcp-server/)
-[![License](https://img.shields.io/pypi/l/holoviz-mcp-server)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/hvmcp)](https://pypi.org/project/hvmcp/)
+[![Python](https://img.shields.io/pypi/pyversions/hvmcp)](https://pypi.org/project/hvmcp/)
+[![License](https://img.shields.io/pypi/l/hvmcp)](LICENSE)
 
 **27 MCP tools · 4 interactive UI templates · live streaming · bidirectional interaction**
 
@@ -358,7 +358,7 @@ Add to your global `~/.config/Code - Insiders/User/mcp.json` or workspace `.vsco
     "holoviz": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+      "args": ["--from", "hvmcp", "hvmcp", "mcp"]
     }
   }
 }
@@ -378,7 +378,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "holoviz": {
       "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+      "args": ["--from", "hvmcp", "hvmcp", "mcp"]
     }
   }
 }
@@ -398,7 +398,7 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "holoviz": {
       "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+      "args": ["--from", "hvmcp", "hvmcp", "mcp"]
     }
   }
 }
@@ -414,7 +414,7 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "holoviz": {
       "command": "uvx",
-      "args": ["--from", "holoviz-mcp-server", "hvmcp", "mcp"]
+      "args": ["--from", "hvmcp", "hvmcp", "mcp"]
     }
   }
 }
@@ -428,11 +428,11 @@ The base install is lightweight. Add only what you need:
 
 | Extra | What it adds | Install |
 |-------|-------------|---------|
-| `geo` | Maps via GeoViews + Cartopy | `uvx --from "holoviz-mcp-server[geo]" hvmcp mcp` |
-| `bigdata` | Datashader for >100k row datasets | `uvx --from "holoviz-mcp-server[bigdata]" hvmcp mcp` |
-| `kaggle` | Kaggle dataset loading | `uvx --from "holoviz-mcp-server[kaggle]" hvmcp mcp` |
-| `huggingface` | HuggingFace dataset loading | `uvx --from "holoviz-mcp-server[huggingface]" hvmcp mcp` |
-| `all` | Everything above | `uvx --from "holoviz-mcp-server[all]" hvmcp mcp` |
+| `geo` | Maps via GeoViews + Cartopy | `uvx --from "hvmcp[geo]" hvmcp mcp` |
+| `bigdata` | Datashader for >100k row datasets | `uvx --from "hvmcp[bigdata]" hvmcp mcp` |
+| `kaggle` | Kaggle dataset loading | `uvx --from "hvmcp[kaggle]" hvmcp mcp` |
+| `huggingface` | HuggingFace dataset loading | `uvx --from "hvmcp[huggingface]" hvmcp mcp` |
+| `all` | Everything above | `uvx --from "hvmcp[all]" hvmcp mcp` |
 
 ### Optional: Kaggle & HuggingFace Integration
 
