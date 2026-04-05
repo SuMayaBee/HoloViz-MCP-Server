@@ -28,7 +28,6 @@ dependencies = [
     "panel>=1.5.0",
     "holoviews>=1.18.0",
     "hvplot>=0.10.0",
-    "geoviews>=1.11.0",
     "bokeh>=3.4.0",
     "pandas>=2.0",
     "pydantic>=2.0",
@@ -36,9 +35,6 @@ dependencies = [
     "requests",
     "typer",
     "ruff",
-    "kaggle>=1.6",
-    "huggingface_hub>=0.20",
-    "datashader>=0.16",
 ]
 
 [project.urls]
@@ -47,26 +43,29 @@ Repository = "https://github.com/SuMayaBee/HoloViz-MCP-Server"
 Issues = "https://github.com/SuMayaBee/HoloViz-MCP-Server/issues"
 
 [project.optional-dependencies]
+geo = [
+    "geoviews>=1.11.0",
+]
+bigdata = [
+    "datashader>=0.16",
+]
+kaggle = [
+    "kaggle>=1.6",
+]
+huggingface = [
+    "huggingface_hub>=0.20",
+]
+all = [
+    "holoviz-mcp-server[geo]",
+    "holoviz-mcp-server[bigdata]",
+    "holoviz-mcp-server[kaggle]",
+    "holoviz-mcp-server[huggingface]",
+]
 dev = [
     "pytest",
     "pytest-asyncio",
     "pre-commit",
     "mypy",
-]
-pydata = [
-    "numpy",
-    "scipy",
-    "polars",
-    "pyarrow",
-    "xarray",
-    "duckdb",
-    "matplotlib",
-    "plotly",
-    "altair",
-    "seaborn",
-    "datashader",
-    "colorcet",
-    "scikit-learn",
 ]
 
 [project.scripts]

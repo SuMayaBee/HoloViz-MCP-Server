@@ -422,6 +422,18 @@ Add to `~/.cursor/mcp.json`:
 
 </details>
 
+### Optional extras
+
+The base install is lightweight. Add only what you need:
+
+| Extra | What it adds | Install |
+|-------|-------------|---------|
+| `geo` | Maps via GeoViews + Cartopy | `uvx --from "holoviz-mcp-server[geo]" hvmcp mcp` |
+| `bigdata` | Datashader for >100k row datasets | `uvx --from "holoviz-mcp-server[bigdata]" hvmcp mcp` |
+| `kaggle` | Kaggle dataset loading | `uvx --from "holoviz-mcp-server[kaggle]" hvmcp mcp` |
+| `huggingface` | HuggingFace dataset loading | `uvx --from "holoviz-mcp-server[huggingface]" hvmcp mcp` |
+| `all` | Everything above | `uvx --from "holoviz-mcp-server[all]" hvmcp mcp` |
+
 ### Optional: Kaggle & HuggingFace Integration
 
 To load datasets directly from Kaggle or HuggingFace URLs, add credentials to the `env` section of your config:

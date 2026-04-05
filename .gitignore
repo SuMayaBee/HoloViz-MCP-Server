@@ -44,11 +44,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
-.mypy_cache/
-.ruff_cache/
-
-# User data
-~/.holoviz-mcp-server/
+.mypy_cache/hores
 
 # Claude Code
 CLAUDE.md
@@ -57,3 +53,5 @@ Gsoc_Idea.txt
 
 # External context (personal/private files)
 external context/
+
+demo.txt

@@ -37,6 +37,18 @@ IMPORT_TO_PACKAGE: dict[str, str] = {
     "attr": "attrs",
 }
 
+PACKAGE_TO_EXTRA: dict[str, str] = {
+    "geoviews": "geo",
+    "cartopy": "geo",
+    "pyproj": "geo",
+    "shapely": "geo",
+    "datashader": "bigdata",
+    "numba": "bigdata",
+    "llvmlite": "bigdata",
+    "kaggle": "kaggle",
+    "huggingface_hub": "huggingface",
+}
+
 
 class ValidationError(ToolError):
     """Raised when code fails a non-security validation check."""
@@ -180,6 +192,13 @@ def check_packages(code: str) -> str | None:
             continue
         if importlib.util.find_spec(import_name) is None:
             package_name = IMPORT_TO_PACKAGE.get(import_name, import_name)
+            extra = PACKAGE_TO_EXTRA.get(import_name)
+            if extra:
+                return (
+                    f"Package '{package_name}' is not installed. "
+                    f"Reinstall with the '{extra}' extra: "
+                    f"uvx --from \"holoviz-mcp-server[{extra}]\" hvmcp mcp"
+                )
             return (
                 f"Package '{package_name}' is not installed. "
                 f"Call list_packages to see what IS available, "
