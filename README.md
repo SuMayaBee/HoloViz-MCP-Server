@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="assets/panel.png" height="60" alt="Panel" />
+<img src="https://raw.githubusercontent.com/SuMayaBee/HoloViz-MCP-Server/main/assets/panel.png" height="60" alt="Panel" />
 &nbsp;&nbsp;&nbsp;
-<img src="assets/holoviews.png" height="60" alt="HoloViews" />
+<img src="https://raw.githubusercontent.com/SuMayaBee/HoloViz-MCP-Server/main/assets/holoviews.png" height="60" alt="HoloViews" />
 &nbsp;&nbsp;&nbsp;
-<img src="assets/hvplot.png" height="60" alt="hvPlot" />
+<img src="https://raw.githubusercontent.com/SuMayaBee/HoloViz-MCP-Server/main/assets/hvplot.png" height="60" alt="hvPlot" />
 
 # HoloViz MCP Server
 
@@ -86,42 +86,7 @@ This project is designed as an MCP-native visualization platform: LLMs call tool
 
 **Architecture at a glance**
 
-```mermaid
-flowchart TD
-    A([User sends a prompt]) --> B[LLM Client\nVS Code · Claude Desktop · Cursor]
-    B --> C{Which tool type?}
-
-    C -->|pn, hvplot, hv| D[Component introspection\nDirect lookup]
-    D --> E[Return result to LLM]
-
-    C -->|load_data| F[Load and profile dataset\nCSV, Kaggle, HuggingFace]
-    F --> G{More than\n100k rows?}
-    G -->|Yes| H[Add Datashader = True\nto recommendation]
-    H --> I[Auto chart recommendations\nby column type]
-    G -->|No| I
-    I --> J[Return profile + chart\nrecommendations]
-
-    C -->|viz guided tools| K[Codegen\nConfig → Python code]
-    K --> M
-
-    C -->|show/stream| M{AST syntax\nvalid?}
-    M -->|No| N[Return error: syntax]
-    M -->|Yes| O{Ruff security\nrules pass?}
-    O -->|No| P[Return error: security violation]
-    O -->|Yes| Q{No blocked imports?}
-    Q -->|No| R[Return error: blocked import]
-    Q -->|Yes| S{Package available?}
-    S -->|No| T[Return error: missing package]
-    S -->|Yes| U{Runtime exec in isolated\nnamespace OK?}
-    U -->|No| V[Return error: runtime failure]
-    U -->|Yes| W[Post to Panel subprocess\nport 5077, /api/snippet]
-    W --> X[(SQLite + FTS5\nsnippets database)]
-    X --> Y{Pure HoloViews\nor hvplot?}
-    Y -->|Yes| Z[Bokeh json_item\nSerialize to JSON spec]
-    Z --> AA[Render inline via BokehJS\nHover, Zoom, Click, in chat]
-    Y -->|No| AB[Panel URL\nServe via Subprocess]
-    AB --> AC[Serve Panel app\nin sandboxed iframe, in chat]
-```
+<img src="https://raw.githubusercontent.com/SuMayaBee/HoloViz-MCP-Server/main/mcp_architecture.png" alt="Architecture" />
 
 ### Layer responsibilities
 
