@@ -14,7 +14,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlparse
+from typing import TypedDict
 
 from fastmcp import Context
 from fastmcp import FastMCP
@@ -26,148 +26,40 @@ from holoviz_mcp_server.config import get_config
 from holoviz_mcp_server.display.client import DisplayClient
 from holoviz_mcp_server.display.manager import PanelServerManager
 from holoviz_mcp_server.utils import ExtensionError
-from holoviz_mcp_server.utils import validate_extension_availability
 from holoviz_mcp_server.validation import SecurityError
 from holoviz_mcp_server.validation import ValidationError
-from holoviz_mcp_server.validation import ast_check
-from holoviz_mcp_server.validation import check_packages
-from holoviz_mcp_server.validation import ruff_check
+from holoviz_mcp_server.server._helpers import externalize_url as _externalize_url
+from holoviz_mcp_server.server._helpers import raise_validation_error as _raise_validation_error
+from holoviz_mcp_server.server._helpers import render_to_json_item as _render_to_json_item
+from holoviz_mcp_server.server._helpers import run_validation as _run_validation
+from holoviz_mcp_server.server._data_sources import recommend_charts as _recommend_charts
+from holoviz_mcp_server.server._data_sources import resolve_huggingface_source as _resolve_huggingface_source
+from holoviz_mcp_server.server._data_sources import resolve_kaggle_source as _resolve_kaggle_source
 
 logger = logging.getLogger(__name__)
+
+
+class VizSpec(TypedDict, total=False):
+    id: str
+    kind: str
+    title: str
+    data: dict[str, list]
+    x: str
+    y: str
+    color: str | None
+    theme: str
+    annotations: list[dict]
+    target_id: str
+    is_dashboard: bool
+
 
 # Global instances
 _manager: PanelServerManager | None = None
 _client: DisplayClient | None = None
-_validation_cache: dict[tuple[str, str], dict] = {}
 _fully_validated: set[tuple[str, str]] = set()
 
 # In-memory store for guided-tool visualizations (enables update/theme/annotate/export)
-_viz_store: dict[str, dict] = {}
-
-
-def _run_validation(code: str, method: str) -> dict:
-    """Run static validation layers and cache the result."""
-    key = (code, method)
-    if key in _validation_cache:
-        return _validation_cache[key]
-
-    result: dict = {}
-
-    if err := ast_check(code):
-        result = {"valid": False, "layer": "syntax", "message": err}
-    else:
-        try:
-            ruff_check(code)
-        except SecurityError as e:
-            result = {"valid": False, "layer": "security", "message": str(e)}
-
-    if not result:
-        if err := check_packages(code):
-            result = {"valid": False, "layer": "packages", "message": err}
-
-    if not result and method == "panel":
-        try:
-            validate_extension_availability(code)
-        except ExtensionError as e:
-            result = {"valid": False, "layer": "extensions", "message": str(e)}
-
-    if not result:
-        result = {"valid": True}
-
-    _validation_cache[key] = result
-    return result
-
-
-def _raise_validation_error(validation: dict) -> None:
-    layer = validation.get("layer", "")
-    message = validation.get("message", "Validation failed.")
-    if layer == "security":
-        raise SecurityError(message)
-    elif layer == "syntax":
-        raise ValidationError(f"[syntax] {message}")
-    elif layer == "packages":
-        raise ValidationError(f"[packages] {message}")
-    elif layer == "extensions":
-        raise ValidationError(f"[extensions] {message}")
-    else:
-        raise ValidationError(message)
-
-
-def _externalize_url(url: str) -> str:
-    """Convert local URLs to externally reachable URLs.
-
-    Also normalizes localhost → 127.0.0.1 to avoid IPv6 resolution issues
-    in VS Code and other Electron-based clients.
-    """
-    if not url:
-        return url
-    parsed = urlparse(url)
-    host = (parsed.hostname or "").lower()
-    if host not in {"localhost", "127.0.0.1"}:
-        return url
-    external_url = get_config().external_url
-    if external_url:
-        path = parsed.path or ""
-        query = f"?{parsed.query}" if parsed.query else ""
-        return f"{external_url.rstrip('/')}{path}{query}"
-    # Normalize localhost → 127.0.0.1 to prevent IPv6 issues in VS Code/Electron
-    if host == "localhost":
-        port_part = f":{parsed.port}" if parsed.port else ""
-        path = parsed.path or ""
-        query = f"?{parsed.query}" if parsed.query else ""
-        return f"{parsed.scheme}://127.0.0.1{port_part}{path}{query}"
-    return url
-
-
-def _render_to_json_item(code: str, method: str) -> dict | None:
-    """Render pure HoloViews/hvPlot code to a Bokeh JSON spec for client-side embedding.
-
-    Only works for HoloViews/hvPlot objects — Panel widgets with custom models
-    require the live Panel server URL instead (they cannot be serialized to pure Bokeh JSON).
-    Returns a json_item dict or None if not applicable / rendering fails.
-    """
-    try:
-        import holoviews as hv
-        import panel as pn
-        from bokeh.embed import json_item
-
-        from holoviz_mcp_server.utils import execute_in_module
-        from holoviz_mcp_server.utils import extract_last_expression
-
-        if method != "jupyter":
-            # Panel .servable() code always uses Panel custom models — use server URL
-            return None
-
-        preamble = "import panel as pn\npn.config.design = None\n\n"
-        full_code = preamble + code
-
-        statements, last_expr = extract_last_expression(full_code)
-        namespace = execute_in_module(statements, module_name="html_render_module", cleanup=False)
-        if not last_expr:
-            return None
-        result = eval(last_expr, namespace)  # noqa: S307
-        if result is None:
-            return None
-
-        # Unwrap Panel HoloViews pane to get the underlying HV object
-        if isinstance(result, pn.pane.HoloViews):
-            result = result.object
-
-        # Only serialize pure HoloViews/hvPlot objects — these produce clean Bokeh figures
-        # with no Panel custom models, so BokehJS can render them without Panel's JS bundles.
-        if not isinstance(result, hv.core.Dimensioned):
-            return None
-
-        hv.extension("bokeh")
-        bokeh_fig = hv.render(result, backend="bokeh")
-        bokeh_fig.sizing_mode = "stretch_width"
-        return json_item(bokeh_fig, "chart-container")
-
-    except Exception as e:
-        logger.debug(f"json_item rendering failed: {e}")
-        return None
-    finally:
-        sys.modules.pop("html_render_module", None)
+_viz_store: dict[str, VizSpec] = {}
 
 
 def _start_panel_server() -> tuple[PanelServerManager | None, DisplayClient | None]:
@@ -208,13 +100,12 @@ def _sigterm_handler(signum, frame):
     os.kill(os.getpid(), signal.SIGTERM)
 
 
-signal.signal(signal.SIGTERM, _sigterm_handler)
-
-
 @asynccontextmanager
 async def app_lifespan(app):
     """MCP server lifespan — eagerly start the Panel server."""
     global _manager, _client
+
+    signal.signal(signal.SIGTERM, _sigterm_handler)
 
     logger.info("Starting HoloViz MCP App...")
     _manager, _client = _start_panel_server()
@@ -223,7 +114,7 @@ async def app_lifespan(app):
         atexit.register(_cleanup)
         feed_url = _externalize_url(f"http://{_manager.host}:{_manager.port}/feed")
         print(f"\n  HoloViz MCP App is running.\n  Feed: {feed_url}\n", file=sys.stderr, flush=True)
-        logger.info(f"Panel server started — feed: {feed_url}")
+        logger.info("Panel server started — feed: %s", feed_url)
     else:
         logger.warning("Panel server failed to start — show tool will not work")
 
@@ -235,37 +126,41 @@ async def app_lifespan(app):
 
 # --- Main MCP Server ---
 
-mcp = FastMCP(
-    "HoloViz MCP App",
-    instructions=(
-        "HoloViz MCP App creates interactive visualizations and dashboards using Panel, hvPlot, and HoloViews.\n\n"
-        "TOOLS:\n"
-        "- show(code): Execute Python code and render as live interactive visualization\n"
-        "- stream(code): Execute streaming Panel code with periodic callbacks\n"
-        "- load_data(source): Profile a dataset (columns, types, sample values)\n"
-        "- handle_interaction(...): Called by MCP App when user clicks a chart point\n"
-        "- skill_list/skill_get: Access best-practice guides for Panel, hvPlot, HoloViews\n"
-        "- viz.create/viz.dashboard: High-level guided tools (no Python needed)\n"
-        "- pn.list/pn.get/pn.params/pn.search: Panel component introspection\n"
-        "- hvplot.list/hvplot.get: hvPlot plot type discovery\n"
-        "- hv.list/hv.get: HoloViews element discovery\n\n"
-        "LIBRARY PREFERENCE: hvPlot > HoloViews > Panel > Matplotlib > Plotly > Bokeh\n\n"
-        "ENVIRONMENT NOTES:\n"
-        "- All required packages are pre-installed — NEVER suggest pip install, pixi install, or pixi remove commands\n"
-        "- If a package is missing, use list_packages() to check what IS available and rewrite the code accordingly\n\n"
-        "PANEL LAYOUT NOTES:\n"
-        "- NEVER use sizing_mode='stretch_both' on pn.Column or top-level layouts — causes huge empty gaps between components\n"
-        "- Use sizing_mode='stretch_width' instead; only set explicit height on chart/plot panes\n\n"
-        "CHART TYPE NOTES:\n"
-        "- hvPlot does NOT support pie/donut charts — use Bokeh figure.wedge() with cumsum() transform instead\n"
-        "- For pie charts: from bokeh.transform import cumsum; df['angle'] = df[col]/df[col].sum()*2*3.14159; p.wedge(...)\n"
-        "- For gauge/radial/polar charts: use Bokeh or Matplotlib, not hvPlot\n"
-        "- For tile maps (OpenStreetMap, CartoDB): use df.hvplot.points(geo=True, tiles='OSM') — NEVER import bokeh.tile_providers (removed in Bokeh 3.x)\n\n"
-        "After show(), always present the URL as a clickable Markdown link: [Open visualization](url)\n"
-        "In VS Code: the link opens in Simple Browser inside the editor."
-    ),
-    lifespan=app_lifespan,
-)
+_INSTRUCTIONS = """\
+HoloViz MCP App creates interactive visualizations and dashboards using Panel, hvPlot, and HoloViews.
+
+TOOLS:
+- show(code): Execute Python code and render as live interactive visualization
+- stream(code): Execute streaming Panel code with periodic callbacks
+- load_data(source): Profile a dataset (columns, types, sample values)
+- handle_interaction(...): Called by MCP App when user clicks a chart point
+- skill_list/skill_get: Access best-practice guides for Panel, hvPlot, HoloViews
+- viz.create/viz.dashboard: High-level guided tools (no Python needed)
+- pn.list/pn.get/pn.params/pn.search: Panel component introspection
+- hvplot.list/hvplot.get: hvPlot plot type discovery
+- hv.list/hv.get: HoloViews element discovery
+
+LIBRARY PREFERENCE: hvPlot > HoloViews > Panel > Matplotlib > Plotly > Bokeh
+
+ENVIRONMENT NOTES:
+- All required packages are pre-installed — NEVER suggest pip install, pixi install, or pixi remove commands
+- If a package is missing, use list_packages() to check what IS available and rewrite the code accordingly
+
+PANEL LAYOUT NOTES:
+- NEVER use sizing_mode='stretch_both' on pn.Column or top-level layouts — causes huge empty gaps between components
+- Use sizing_mode='stretch_width' instead; only set explicit height on chart/plot panes
+
+CHART TYPE NOTES:
+- hvPlot does NOT support pie/donut charts — use Bokeh figure.wedge() with cumsum() transform instead
+- For pie charts: from bokeh.transform import cumsum; df['angle'] = df[col]/df[col].sum()*2*3.14159; p.wedge(...)
+- For gauge/radial/polar charts: use Bokeh or Matplotlib, not hvPlot
+- For tile maps (OpenStreetMap, CartoDB): use df.hvplot.points(geo=True, tiles='OSM') — NEVER import bokeh.tile_providers (removed in Bokeh 3.x)
+
+After show(), always present the URL as a clickable Markdown link: [Open visualization](url)
+In VS Code: the link opens in Simple Browser inside the editor.\
+"""
+
+mcp = FastMCP("HoloViz MCP App", instructions=_INSTRUCTIONS, lifespan=app_lifespan)
 
 
 # --- MCP App Resources (templates for inline rendering in Claude Desktop) ---
@@ -276,18 +171,23 @@ STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
 DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 
 
-_RESOURCE_CSP = ResourceCSP(
-    resource_domains=[
-        "https://cdn.bokeh.org",
-        "https://unpkg.com",
-        "https://*.basemaps.cartocdn.com",
-        "https://*.tile.openstreetmap.org",
-    ],
-    frame_domains=[
-        "http://127.0.0.1:5077",
-        "http://localhost:5077",
-    ],
-)
+def _build_resource_csp() -> ResourceCSP:
+    port = get_config().port
+    return ResourceCSP(
+        resource_domains=[
+            "https://cdn.bokeh.org",
+            "https://unpkg.com",
+            "https://*.basemaps.cartocdn.com",
+            "https://*.tile.openstreetmap.org",
+        ],
+        frame_domains=[
+            f"http://127.0.0.1:{port}",
+            f"http://localhost:{port}",
+        ],
+    )
+
+
+_RESOURCE_CSP = _build_resource_csp()
 
 
 @mcp.resource(VIZ_RESOURCE_URI, app=AppConfig(csp=_RESOURCE_CSP))
@@ -309,6 +209,48 @@ def dashboard_app_resource() -> str:
 
 
 # --- Core Tools ---
+
+
+async def _ensure_client(ctx: Context | None = None) -> DisplayClient:
+    """Return a healthy DisplayClient, attempting lazy connect and restart as needed."""
+    global _client, _manager
+
+    if not _client:
+        config = get_config()
+        _lazy_client = DisplayClient(base_url=f"http://{config.host}:{config.port}")
+        if _lazy_client.is_healthy():
+            _client = _lazy_client
+        else:
+            raise ToolError(f"Panel server not running. Ensure port {config.port} is available.")
+
+    if not _client.is_healthy():
+        if ctx:
+            await ctx.info("Panel server unhealthy, attempting restart...")
+        if _manager and _manager.restart():
+            _client.close()
+            _client = DisplayClient(base_url=_manager.get_base_url())
+        else:
+            raise ToolError("Panel server unhealthy and restart failed.")
+
+    return _client
+
+
+async def _validate_code_for_show(code: str, method: str, quick: bool) -> None:
+    """Run validation before show(). Raises ValidationError/SecurityError on failure."""
+    if quick:
+        validation = _run_validation(code, method)
+        if not validation["valid"]:
+            _raise_validation_error(validation)
+        from holoviz_mcp_server.utils import validate_code
+        runtime_error = await asyncio.to_thread(validate_code, code)
+        if runtime_error:
+            raise ValidationError(f"[runtime] {runtime_error}")
+    else:
+        if (code, method) not in _fully_validated:
+            raise ValidationError("Code not validated. Call validate() first or use quick=True.")
+        validation = _run_validation(code, method)
+        if not validation["valid"]:
+            _raise_validation_error(validation)
 
 
 @mcp.tool(name="show", app=AppConfig(resource_uri=VIZ_RESOURCE_URI))
@@ -340,60 +282,19 @@ async def show(
     quick : bool
         If True, run full validation inline.
     """
-    global _manager, _client
-
     _valid_zooms = [25, 50, 75, 100]
     zoom = min(_valid_zooms, key=lambda z: abs(z - zoom))
 
-    if quick:
-        validation = _run_validation(code, method)
-        if not validation["valid"]:
-            _raise_validation_error(validation)
-
-        from holoviz_mcp_server.utils import validate_code
-
-        runtime_error = await asyncio.to_thread(validate_code, code)
-        if runtime_error:
-            raise ValidationError(f"[runtime] {runtime_error}")
-    else:
-        key = (code, method)
-        if key not in _fully_validated:
-            raise ValidationError("Code not validated. Call validate() first or use quick=True.")
-        validation = _run_validation(code, method)
-        if not validation["valid"]:
-            _raise_validation_error(validation)
-
-    if not _client:
-        # Lazily try to connect if the server started after MCP server initialization
-        config = get_config()
-        _lazy_client = DisplayClient(base_url=f"http://{config.host}:{config.port}")
-        if _lazy_client.is_healthy():
-            _client = _lazy_client
-        else:
-            raise ToolError(f"Panel server not running. Ensure port {config.port} is available.")
-
-    if not _client.is_healthy():
-        if ctx:
-            await ctx.info("Panel server unhealthy, attempting restart...")
-        if _manager and _manager.restart():
-            _client.close()
-            _client = DisplayClient(base_url=_manager.get_base_url())
-        else:
-            raise ToolError("Panel server unhealthy and restart failed.")
+    await _validate_code_for_show(code, method, quick)
+    client = await _ensure_client(ctx)
 
     try:
-        response = _client.create_snippet(
-            code=code,
-            name=name,
-            description=description,
-            method=method,
-        )
+        response = client.create_snippet(code=code, name=name, description=description, method=method)
         url = _externalize_url(response.get("url", ""))
 
         if error_message := response.get("error_message", None):
             raise ToolError(f"Visualization created but failed at runtime:\n{error_message}")
 
-        # Try json_item for pure HoloViews/hvPlot (no Panel custom models needed)
         figure_spec = await asyncio.to_thread(_render_to_json_item, code, method)
 
         if figure_spec:
@@ -425,7 +326,7 @@ async def show(
     except ValueError as e:
         raise ValidationError(f"[packages] {e}") from e
     except Exception as e:
-        logger.exception(f"Error creating visualization: {e}")
+        logger.exception("Error creating visualization: %s", e)
         raise ToolError(f"Failed to create visualization: {e!s}") from e
 
 
@@ -479,201 +380,6 @@ async def stream(
     except Exception as e:
         raise ToolError(f"Failed to create stream: {e!s}") from e
 
-
-def _resolve_kaggle_source(source: str) -> str | dict:
-    """Download a Kaggle dataset/competition and return the local file path.
-
-    Returns a file path string on success, or an error dict if credentials are
-    missing or the download fails.
-    """
-    import re
-    import tempfile
-
-    username = os.environ.get("KAGGLE_USERNAME")
-    key = os.environ.get("KAGGLE_KEY")
-
-    if not username or not key:
-        return {
-            "error": (
-                "Kaggle API credentials not provided. "
-                "Add KAGGLE_USERNAME and KAGGLE_KEY to the env section of your MCP config:\n"
-                '  "env": { "KAGGLE_USERNAME": "your_username", "KAGGLE_KEY": "your_api_key" }\n'
-                "Get your API key at https://www.kaggle.com → Account → Settings → Create New Token."
-            ),
-            "source": source,
-        }
-
-    os.environ["KAGGLE_USERNAME"] = username
-    os.environ["KAGGLE_KEY"] = key
-
-    try:
-        import kaggle  # noqa: PLC0415
-    except ImportError:
-        return {"error": "kaggle package is not installed. Reinstall with the 'kaggle' extra: uvx --from \"hvmcp[kaggle]\" hvmcp mcp", "source": source}
-
-    download_dir = tempfile.mkdtemp(prefix="holoviz_kaggle_")
-
-    # Dataset URL: kaggle.com/datasets/owner/name
-    dataset_match = re.search(r"kaggle\.com/datasets/([^/?#]+/[^/?#]+)", source)
-    # Competition URL: kaggle.com/competitions/name
-    competition_match = re.search(r"kaggle\.com/competitions/([^/?#]+)", source)
-
-    try:
-        if dataset_match:
-            slug = dataset_match.group(1)
-            kaggle.api.authenticate()
-            kaggle.api.dataset_download_files(slug, path=download_dir, unzip=True)
-        elif competition_match:
-            slug = competition_match.group(1)
-            kaggle.api.authenticate()
-            kaggle.api.competition_download_files(slug, path=download_dir)
-        else:
-            return {"error": f"Could not parse Kaggle URL: {source}", "source": source}
-    except Exception as e:
-        return {"error": f"Kaggle download failed: {e}", "source": source}
-
-    # Find the first CSV or Parquet file in the download directory
-    for ext in ("*.csv", "*.parquet", "*.tsv", "*.json"):
-        matches = list(Path(download_dir).rglob(ext))
-        if matches:
-            return str(matches[0])
-
-    return {"error": "No CSV/Parquet/TSV/JSON file found in the downloaded Kaggle dataset.", "source": source}
-
-
-def _resolve_huggingface_source(source: str) -> str | dict:
-    """Download a HuggingFace dataset and return the local file path.
-
-    Returns a file path string on success, or an error dict on failure.
-    HF_TOKEN env var is optional — only needed for private datasets.
-    """
-    import re
-    import tempfile
-
-    match = re.search(r"huggingface\.co/datasets/([^/?#]+/[^/?#]+)", source)
-    if not match:
-        return {"error": f"Could not parse HuggingFace dataset URL: {source}", "source": source}
-
-    repo_id = match.group(1)
-    token = os.environ.get("HF_TOKEN")  # optional
-
-    try:
-        from huggingface_hub import list_repo_files  # noqa: PLC0415
-        from huggingface_hub import hf_hub_download  # noqa: PLC0415
-    except ImportError:
-        return {"error": "huggingface_hub package is not installed. Reinstall with the 'huggingface' extra: uvx --from \"hvmcp[huggingface]\" hvmcp mcp", "source": source}
-
-    try:
-        download_dir = tempfile.mkdtemp(prefix="holoviz_hf_")
-        # Find the first Parquet or CSV file in the dataset repo
-        all_files = list(list_repo_files(repo_id, repo_type="dataset", token=token))
-        target = next(
-            (f for f in all_files if f.endswith(".parquet")),
-            next((f for f in all_files if f.endswith(".csv")), None),
-        )
-        if not target:
-            return {"error": f"No Parquet or CSV file found in HuggingFace dataset '{repo_id}'.", "source": source}
-
-        local_path = hf_hub_download(
-            repo_id=repo_id,
-            filename=target,
-            repo_type="dataset",
-            token=token,
-            local_dir=download_dir,
-        )
-        return local_path
-
-    except Exception as e:
-        return {"error": f"HuggingFace download failed: {e}", "source": source}
-
-
-def _recommend_charts(profile: dict) -> list[dict]:
-    """Analyse a dataset profile and return up to 3 chart recommendations with ready-to-run code."""
-    source = profile["source"]
-    rows = profile["shape"]["rows"]
-    columns = profile["columns"]
-
-    numeric_cols = [c["name"] for c in columns if c["dtype"] in ("int64", "float64", "int32", "float32")]
-    categorical_cols = [c["name"] for c in columns if c["dtype"] in ("object", "category", "bool") and c["unique"] < 50]
-    datetime_cols = [
-        c["name"]
-        for c in columns
-        if "datetime" in c["dtype"] or any(k in c["name"].lower() for k in ("date", "time", "year", "month"))
-    ]
-
-    # Use datashade=True for large datasets automatically
-    large = rows > 100_000
-    datashade_arg = ", datashade=True" if large else ""
-
-    # Detect file reader
-    src_lower = source.lower()
-    if src_lower.endswith(".parquet"):
-        reader = f'pd.read_parquet("{source}")'
-    elif src_lower.endswith(".tsv"):
-        reader = f'pd.read_csv("{source}", sep="\\t")'
-    else:
-        reader = f'pd.read_csv("{source}")'
-
-    recs: list[dict] = []
-
-    # 1. Time series line chart
-    if datetime_cols and numeric_cols:
-        t, v = datetime_cols[0], numeric_cols[0]
-        recs.append({
-            "type": "line",
-            "title": f"{v} over time",
-            "reason": f"Datetime column '{t}' + numeric column '{v}' detected",
-            "code": (
-                f"import pandas as pd\nimport hvplot.pandas\n"
-                f'df = {reader}\ndf["{t}"] = pd.to_datetime(df["{t}"])\n'
-                f'df.hvplot.line(x="{t}", y="{v}"{datashade_arg}, title="{v} over time")'
-            ),
-        })
-
-    # 2. Scatter for numeric pairs
-    if len(numeric_cols) >= 2:
-        x, y = numeric_cols[0], numeric_cols[1]
-        color_arg = f', by="{categorical_cols[0]}"' if categorical_cols else ""
-        recs.append({
-            "type": "scatter",
-            "title": f"{x} vs {y}",
-            "reason": f"Two numeric columns '{x}' and '{y}' detected",
-            "code": (
-                f"import pandas as pd\nimport hvplot.pandas\n"
-                f"df = {reader}\n"
-                f'df.hvplot.scatter(x="{x}", y="{y}"{color_arg}{datashade_arg}, title="{x} vs {y}")'
-            ),
-        })
-
-    # 3. Bar for categorical + numeric
-    if categorical_cols and numeric_cols:
-        cat, val = categorical_cols[0], numeric_cols[0]
-        recs.append({
-            "type": "bar",
-            "title": f"{val} by {cat}",
-            "reason": f"Categorical column '{cat}' + numeric column '{val}' detected",
-            "code": (
-                f"import pandas as pd\nimport hvplot.pandas\n"
-                f"df = {reader}\n"
-                f'df.groupby("{cat}")["{val}"].mean().hvplot.bar(title="{val} by {cat}", rot=45)'
-            ),
-        })
-
-    # 4. Histogram fallback
-    if len(recs) < 3 and numeric_cols:
-        val = numeric_cols[0]
-        recs.append({
-            "type": "histogram",
-            "title": f"Distribution of {val}",
-            "reason": f"Numeric column '{val}' available for distribution analysis",
-            "code": (
-                f"import pandas as pd\nimport hvplot.pandas\n"
-                f"df = {reader}\n"
-                f'df.hvplot.hist("{val}", bins=30, title="Distribution of {val}")'
-            ),
-        })
-
-    return recs[:3]
 
 
 @mcp.tool(name="load_data")

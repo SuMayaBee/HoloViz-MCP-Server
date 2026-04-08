@@ -57,3 +57,9 @@ external context/
 demo.txt
 
 kaggle-eda-studio/
+
+panel-live-server
+holoviz-mcp
+
+.vscode
+.cursor
