@@ -71,9 +71,7 @@ src/holoviz_mcp_server/
 │
 ├── templates/           # MCP App HTML (iframes rendered inline in LLM chat)
 │   ├── show.html        # Chart viewer — BokehJS embed or iframe + click-to-insight
-│   ├── stream.html      # Live streaming viewer with play/pause
-│   ├── dashboard.html   # Dashboard with stats + filters
-│   └── multi.html       # Multi-chart grid with linked selections
+│   └── stream.html      # Live streaming viewer with play/pause
 │
 └── skills/              # Agent skill guides (SKILL.md with YAML frontmatter)
     ├── panel/SKILL.md

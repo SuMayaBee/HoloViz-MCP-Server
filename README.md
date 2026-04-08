@@ -97,7 +97,7 @@ This project is designed as an MCP-native visualization platform: LLMs call tool
 | Validation and Safety | Enforces secure code execution before rendering                     | `validation.py`, `utils.py`, `display/database.py`                                                 |
 | Display Runtime       | Runs Panel as managed subprocess, serves rendered apps              | `display/manager.py`, `display/app.py`, `display/endpoints.py`                                     |
 | Persistence           | Stores every snippet and execution metadata for replay/debug/search | `display/database.py`                                                                              |
-| MCP App UI            | Renders interactive outputs inline in chat sandboxes                | `templates/show.html`, `templates/dashboard.html`, `templates/stream.html`, `templates/multi.html` |
+| MCP App UI            | Renders interactive outputs inline in chat sandboxes                | `templates/show.html`, `templates/stream.html`                                                     |
 | HoloViz Stack         | Visualization abstraction and rendering backend                     | Panel, HoloViews, hvPlot, Bokeh, Param                                                             |
 | Data Layer            | Ingestion and profiling for local and remote datasets               | `load_data()` tool in `server/main.py`                                                             |
 
@@ -282,9 +282,7 @@ src/holoviz_mcp_server/
 │
 ├── templates/           # MCP App HTML (inline rendering in chat)
 │   ├── show.html        # Chart viewer + click-to-insight
-│   ├── stream.html      # Live streaming viewer
-│   ├── dashboard.html   # Dashboard viewer
-│   └── multi.html       # Multi-chart grid
+│   └── stream.html      # Live streaming viewer
 │
 └── skills/              # Best-practice guides (SKILL.md files)
     ├── panel/

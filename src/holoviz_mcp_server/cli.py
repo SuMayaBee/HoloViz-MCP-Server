@@ -6,7 +6,7 @@ import sys
 from typing import Annotated
 
 if sys.platform == "win32":
-    from holoviz_mcp_server.utils import prepend_env_dll_paths
+    from holoviz_mcp_server.platform import prepend_env_dll_paths
 
     prepend_env_dll_paths(os.environ)
 

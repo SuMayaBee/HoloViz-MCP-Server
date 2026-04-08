@@ -25,14 +25,13 @@ from fastmcp.server.apps import ResourceCSP
 from holoviz_mcp_server.config import get_config
 from holoviz_mcp_server.display.client import DisplayClient
 from holoviz_mcp_server.display.manager import PanelServerManager
-from holoviz_mcp_server.utils import ExtensionError
+from holoviz_mcp_server.analysis import ExtensionError
 from holoviz_mcp_server.validation import SecurityError
 from holoviz_mcp_server.validation import ValidationError
 from holoviz_mcp_server.server._helpers import externalize_url as _externalize_url
 from holoviz_mcp_server.server._helpers import raise_validation_error as _raise_validation_error
 from holoviz_mcp_server.server._helpers import render_to_json_item as _render_to_json_item
 from holoviz_mcp_server.server._helpers import run_validation as _run_validation
-from holoviz_mcp_server.server._data_sources import recommend_charts as _recommend_charts
 from holoviz_mcp_server.server._data_sources import resolve_huggingface_source as _resolve_huggingface_source
 from holoviz_mcp_server.server._data_sources import resolve_kaggle_source as _resolve_kaggle_source
 
@@ -168,7 +167,6 @@ mcp = FastMCP("HoloViz MCP App", instructions=_INSTRUCTIONS, lifespan=app_lifesp
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 VIZ_RESOURCE_URI = "ui://holoviz-mcp-server/viz-v9"
 STREAM_RESOURCE_URI = "ui://holoviz-mcp-server/stream"
-DASHBOARD_RESOURCE_URI = "ui://holoviz-mcp-server/dashboard-v2"
 
 
 def _build_resource_csp() -> ResourceCSP:
@@ -200,12 +198,6 @@ def viz_app_resource() -> str:
 def stream_app_resource() -> str:
     """Serve the stream template for MCP Apps rendering."""
     return (_TEMPLATES_DIR / "stream.html").read_text()
-
-
-@mcp.resource(DASHBOARD_RESOURCE_URI, app=AppConfig(csp=_RESOURCE_CSP))
-def dashboard_app_resource() -> str:
-    """Serve the dashboard template for MCP Apps rendering."""
-    return (_TEMPLATES_DIR / "dashboard.html").read_text()
 
 
 # --- Core Tools ---
@@ -454,9 +446,6 @@ async def load_data(
                 col_info["mean"] = float(df[col].mean())
             profile["columns"].append(col_info)
 
-        # Auto chart recommendations based on column types
-        profile["recommendations"] = _recommend_charts(profile)
-
         # Flag large datasets so the LLM knows to use datashader
         if rows > 100_000:
             profile["large_dataset"] = True
@@ -636,7 +625,7 @@ async def update_viz(
     """
     import pandas as pd
 
-    from holoviz_mcp_server.chart_builders import rebuild_figure
+    from holoviz_mcp_server.server._chart_builders import rebuild_figure
 
     if viz_id not in _viz_store:
         return json.dumps(
@@ -688,7 +677,7 @@ async def set_theme(
     theme : str
         "dark" or "light".
     """
-    from holoviz_mcp_server.chart_builders import rebuild_figure
+    from holoviz_mcp_server.server._chart_builders import rebuild_figure
 
     if theme not in ("dark", "light"):
         return json.dumps({"action": "error", "message": "Theme must be 'dark' or 'light'"})
@@ -727,8 +716,8 @@ async def annotate_viz(
         band:  {lower, upper, color?, alpha?}
         arrow: {x_start, y_start, x_end, y_end, color?}
     """
-    from holoviz_mcp_server.chart_builders import ANNOTATION_TYPES
-    from holoviz_mcp_server.chart_builders import rebuild_figure
+    from holoviz_mcp_server.server._chart_builders import ANNOTATION_TYPES
+    from holoviz_mcp_server.server._chart_builders import rebuild_figure
 
     if annotation_type not in ANNOTATION_TYPES:
         return json.dumps({"action": "error", "message": f"Unsupported annotation type. Use: {ANNOTATION_TYPES}"})
@@ -800,76 +789,3 @@ async def export_data(
     )
 
 
-@mcp.tool(name="apply_filter", app=AppConfig(resource_uri=DASHBOARD_RESOURCE_URI, visibility=["app"]))
-async def apply_filter(
-    viz_id: str,
-    filters: dict,
-    ctx: Context | None = None,
-) -> str:
-    """Apply filters to a dashboard. Called by the dashboard UI widgets.
-
-    Parameters
-    ----------
-    viz_id : str
-        ID of the dashboard visualization.
-    filters : dict
-        {column: value} for categorical (use "__all__" to clear),
-        {column: [min, max]} for numeric range.
-    """
-    import pandas as pd
-
-    from holoviz_mcp_server.chart_builders import build_bokeh_figure
-
-    if viz_id not in _viz_store:
-        return json.dumps({"action": "error", "message": f"Dashboard '{viz_id}' not found."})
-
-    viz = _viz_store[viz_id]
-    df = pd.DataFrame(viz["data"])
-
-    for col, value in filters.items():
-        if col not in df.columns:
-            continue
-        if value == "__all__":
-            continue
-        if isinstance(value, str):
-            df = df[df[col] == value]
-        elif isinstance(value, list) and len(value) == 2:
-            df = df[(df[col] >= value[0]) & (df[col] <= value[1])]
-
-    if df.empty:
-        return json.dumps({
-            "action": "filter_result", "id": viz_id,
-            "empty": True, "message": "No data matches the current filters",
-        })
-
-    theme = viz.get("theme", "dark")
-    spec = build_bokeh_figure(
-        viz["kind"], df, viz["x"], viz["y"], viz["title"], viz.get("color"),
-        target_id=viz.get("target_id", "chart"), theme=theme,
-    )
-
-    y_series = pd.to_numeric(df[viz["y"]], errors="coerce").dropna()
-    stats = {
-        "count": int(y_series.count()),
-        "mean": round(float(y_series.mean()), 2),
-        "median": round(float(y_series.median()), 2),
-        "min": round(float(y_series.min()), 2),
-        "max": round(float(y_series.max()), 2),
-        "std": round(float(y_series.std()), 2) if len(y_series) > 1 else 0.0,
-        "sum": round(float(y_series.sum()), 2),
-    }
-
-    max_table_rows = 200
-    return json.dumps({
-        "action": "filter_result",
-        "id": viz_id,
-        "empty": False,
-        "figure": spec,
-        "stats": stats,
-        "table": {
-            "columns": list(df.columns),
-            "rows": df.head(max_table_rows).values.tolist(),
-            "total": len(df),
-        },
-        "filtered_rows": len(df),
-    })

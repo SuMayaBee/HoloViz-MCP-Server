@@ -15,7 +15,7 @@ from pathlib import Path
 import psutil
 import requests
 
-from holoviz_mcp_server.utils import prepend_env_dll_paths
+from holoviz_mcp_server.platform import prepend_env_dll_paths
 
 logger = logging.getLogger(__name__)
 

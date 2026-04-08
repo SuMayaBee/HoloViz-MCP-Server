@@ -2,12 +2,12 @@
 
 import pytest
 
-from holoviz_mcp_server.utils import (
+from holoviz_mcp_server.analysis import (
     ExtensionError,
-    extract_last_expression,
     find_extensions,
     validate_extension_availability,
 )
+from holoviz_mcp_server.utils import extract_last_expression
 
 
 class TestFindExtensions:

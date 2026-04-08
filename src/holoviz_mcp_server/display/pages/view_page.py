@@ -12,7 +12,7 @@ from holoviz_mcp_server.display.database import Snippet
 from holoviz_mcp_server.display.database import get_db
 from holoviz_mcp_server.utils import execute_in_module
 from holoviz_mcp_server.utils import extract_last_expression
-from holoviz_mcp_server.utils import find_extensions
+from holoviz_mcp_server.analysis import find_extensions
 
 logger = logging.getLogger(__name__)
 

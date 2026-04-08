@@ -13,7 +13,6 @@ import pandas as pd
 from bokeh.embed import json_item
 from bokeh.models import Arrow
 from bokeh.models import BoxAnnotation
-from bokeh.models import ColumnDataSource
 from bokeh.models import CustomJS
 from bokeh.models import FixedTicker
 from bokeh.models import HoverTool
@@ -22,15 +21,27 @@ from bokeh.models import NormalHead
 from bokeh.models import NumeralTickFormatter
 from bokeh.models import Span
 from bokeh.models import TapTool
-from bokeh.palettes import Category10
-from bokeh.plotting import figure as bokeh_figure
-from bokeh.transform import cumsum
-
-from holoviz_mcp_server.themes import THEME_COLORS
 
 hv.extension("bokeh")
 
-hv.extension("bokeh")
+THEME_COLORS = {
+    "dark": {
+        "label": "#94a3b8",
+        "tick": "#475569",
+        "grid": "#334155",
+        "grid_alpha": 0.5,
+        "title": "#e0e0e0",
+        "legend_text": "#94a3b8",
+    },
+    "light": {
+        "label": "#374151",
+        "tick": "#d1d5db",
+        "grid": "#e5e7eb",
+        "grid_alpha": 0.8,
+        "title": "#111827",
+        "legend_text": "#374151",
+    },
+}
 
 CHART_PALETTE = [
     "#818cf8",
@@ -44,22 +55,7 @@ CHART_PALETTE = [
     "#e879f9",
     "#a3e635",
 ]
-CHART_TYPES = [
-    "bar",
-    "line",
-    "scatter",
-    "area",
-    "pie",
-    "histogram",
-    "box",
-    "violin",
-    "kde",
-    "step",
-    "heatmap",
-    "hexbin",
-]
 ANNOTATION_TYPES = ["text", "hline", "vline", "band", "arrow"]
-MAX_CHART_ROWS = 10_000
 
 
 def _apply_theme(fig, theme: str = "dark") -> None:
@@ -88,50 +84,6 @@ def _apply_theme(fig, theme: str = "dark") -> None:
         fig.legend.label_text_color = colors["legend_text"]
         fig.legend.background_fill_alpha = 0
         fig.legend.border_line_alpha = 0
-
-
-def build_bokeh_figure(
-    kind: str,
-    df: pd.DataFrame,
-    x: str,
-    y: str,
-    title: str,
-    color: str | None = None,
-    target_id: str = "chart-container",
-    theme: str = "dark",
-) -> dict:
-    """Build a Bokeh figure and serialize to json_item dict."""
-    if kind not in CHART_TYPES:
-        raise ValueError(f"Unsupported chart type: {kind}. Supported: {CHART_TYPES}")
-    if x not in df.columns:
-        raise ValueError(f"Column '{x}' not found. Available: {list(df.columns)}")
-    if y not in df.columns:
-        raise ValueError(f"Column '{y}' not found. Available: {list(df.columns)}")
-    if color and color not in df.columns:
-        raise ValueError(f"Color column '{color}' not found. Available: {list(df.columns)}")
-
-    if len(df) > MAX_CHART_ROWS and kind not in ("pie", "heatmap"):
-        df = df.sample(n=MAX_CHART_ROWS, random_state=42).sort_index()
-
-    if kind == "pie":
-        fig = _build_pie_chart(df, x, y, title, theme)
-    else:
-        fig = _build_hvplot_chart(kind, df, x, y, title, color)
-        _apply_theme(fig, theme)
-
-    fig.sizing_mode = "stretch_width"
-
-    for axis in fig.yaxis:
-        if hasattr(axis, "formatter"):
-            try:
-                axis.formatter = NumeralTickFormatter(format="0,0.[00]")
-            except Exception:  # noqa: S110
-                pass
-
-    fig.add_tools(TapTool())
-    _add_click_callbacks(fig, x, y)
-
-    return json_item(fig, target_id)
 
 
 def _build_hvplot_chart(
@@ -234,7 +186,12 @@ def _build_hvplot_chart(
 
 
 def _build_pie_chart(df: pd.DataFrame, names_col: str, values_col: str, title: str, theme: str = "dark"):
-    """Build a pie/donut chart using raw Bokeh (hvPlot lacks pie support)."""
+    """Build a pie chart using raw Bokeh (hvPlot lacks pie support)."""
+    from bokeh.models import ColumnDataSource
+    from bokeh.palettes import Category10
+    from bokeh.plotting import figure as bokeh_figure
+    from bokeh.transform import cumsum
+
     data = df.groupby(names_col)[values_col].sum().reset_index()
     data["angle"] = data[values_col] / data[values_col].sum() * 2 * math.pi
     data["pct"] = (data[values_col] / data[values_col].sum() * 100).round(1)
@@ -372,28 +329,6 @@ def add_annotation(fig, annotation_type: str, config: dict) -> None:
                 line_width=2,
             )
         )
-
-
-def build_widget_config(df: pd.DataFrame) -> list[dict]:
-    """Generate filter widget config from a DataFrame — dropdowns for categorical, sliders for numeric."""
-    widgets = []
-    for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
-            col_min = float(df[col].min())
-            col_max = float(df[col].max())
-            rng = col_max - col_min
-            if rng == 0:
-                step = 1.0
-            elif pd.api.types.is_integer_dtype(df[col]):
-                step = max(1, int(rng / 100))
-            else:
-                step = round(rng / 100, 4)
-            widgets.append({"column": col, "type": "range", "min": col_min, "max": col_max, "step": step})
-        elif pd.api.types.is_string_dtype(df[col]) or df[col].dtype.name == "category":
-            unique_vals = sorted(df[col].dropna().unique().tolist())
-            if len(unique_vals) <= 50:
-                widgets.append({"column": col, "type": "select", "options": unique_vals})
-    return widgets
 
 
 def rebuild_figure(viz: dict, target_id: str = "chart-container") -> dict:

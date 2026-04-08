@@ -23,10 +23,10 @@ from pydantic import Field
 from pydantic import field_validator
 
 from holoviz_mcp_server.config import get_config
-from holoviz_mcp_server.utils import find_extensions
-from holoviz_mcp_server.utils import find_requirements
+from holoviz_mcp_server.analysis import find_extensions
+from holoviz_mcp_server.analysis import find_requirements
+from holoviz_mcp_server.analysis import validate_extension_availability
 from holoviz_mcp_server.utils import validate_code
-from holoviz_mcp_server.utils import validate_extension_availability
 from holoviz_mcp_server.validation import ast_check
 from holoviz_mcp_server.validation import check_packages
 from holoviz_mcp_server.validation import ruff_check

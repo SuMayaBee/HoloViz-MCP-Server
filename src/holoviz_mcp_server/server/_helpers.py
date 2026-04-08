@@ -10,8 +10,8 @@ import logging
 import sys
 from urllib.parse import urlparse
 
-from holoviz_mcp_server.utils import ExtensionError
-from holoviz_mcp_server.utils import validate_extension_availability
+from holoviz_mcp_server.analysis import ExtensionError
+from holoviz_mcp_server.analysis import validate_extension_availability
 from holoviz_mcp_server.validation import SecurityError
 from holoviz_mcp_server.validation import ValidationError
 from holoviz_mcp_server.validation import ast_check
