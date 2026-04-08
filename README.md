@@ -93,7 +93,7 @@ This project is designed as an MCP-native visualization platform: LLMs call tool
 | Layer                 | Responsibility                                                      | Key implementation modules                                                                         |
 | --------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | LLM Client Layer      | Hosts the chat UX and invokes MCP tools                             | VS Code Copilot, Claude Desktop, Cursor                                                            |
-| MCP Orchestration     | Defines tool surface and namespaces                                 | `server/main.py`, `server/compose.py`, `server/guided_mcp.py`                                      |
+| MCP Orchestration     | Defines tool surface and namespaces                                 | `server/main.py`, `server/compose.py`                                                              |
 | Validation and Safety | Enforces secure code execution before rendering                     | `validation.py`, `utils.py`, `display/database.py`                                                 |
 | Display Runtime       | Runs Panel as managed subprocess, serves rendered apps              | `display/manager.py`, `display/app.py`, `display/endpoints.py`                                     |
 | Persistence           | Stores every snippet and execution metadata for replay/debug/search | `display/database.py`                                                                              |
@@ -103,7 +103,7 @@ This project is designed as an MCP-native visualization platform: LLMs call tool
 
 ### End-to-end flow
 
-1. An agent calls a tool such as `show`, `viz.create`, or `viz.dashboard`.
+1. An agent calls a tool such as `show` or `stream`.
 2. The server runs a 5-layer validation pipeline (syntax, security, packages, extensions, runtime).
 3. Validated code/config is sent to the Panel display subprocess via REST.
 4. The display server executes and persists the snippet in SQLite.
@@ -262,13 +262,9 @@ src/holoviz_mcp_server/
 ├── server/              # MCP server layer (FastMCP)
 │   ├── main.py          # Main server + core tools (show, stream, load_data, ...)
 │   ├── compose.py       # Mounts all sub-servers with namespaces
-│   ├── guided_mcp.py    # viz.* tools (create, dashboard, stream, multi)
 │   ├── panel_mcp.py     # pn.* tools
 │   ├── hvplot_mcp.py    # hvplot.* tools
 │   └── holoviews_mcp.py # hv.* tools
-│
-├── codegen/             # Code generators (config → Python)
-│   └── codegen.py
 │
 ├── introspection/       # Pure Python discovery functions
 │   ├── panel.py         # Panel component discovery

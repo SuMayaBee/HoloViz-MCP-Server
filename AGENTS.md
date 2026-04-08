@@ -47,13 +47,9 @@ src/holoviz_mcp_server/
 ├── server/              # MCP server layer
 │   ├── main.py          # Main FastMCP server + core tools
 │   ├── compose.py       # Mounts sub-servers with namespaces
-│   ├── guided_mcp.py    # viz.* sub-server (create, dashboard, stream, multi, annotate, export)
 │   ├── panel_mcp.py     # pn.* sub-server (list, get, params, search)
 │   ├── hvplot_mcp.py    # hvplot.* sub-server (list, get)
 │   └── holoviews_mcp.py # hv.* sub-server (list, get)
-│
-├── codegen/             # Code generators (structured config → Python code)
-│   └── codegen.py       # generate_viz_code, generate_dashboard_code, generate_stream_code, generate_multi_chart_code
 │
 ├── introspection/       # Pure Python discovery functions (no MCP dependency)
 │   ├── panel.py         # Panel component discovery (list_components, get_component, search_components)
@@ -90,7 +86,6 @@ src/holoviz_mcp_server/
 ### Server Composition
 
 ```python
-main_mcp.mount(guided_mcp,    namespace="viz")     # viz.create, viz.dashboard, viz.stream, viz.multi
 main_mcp.mount(panel_mcp,     namespace="pn")      # pn.list, pn.get, pn.params, pn.search
 main_mcp.mount(hvplot_mcp,    namespace="hvplot")  # hvplot.list, hvplot.get
 main_mcp.mount(holoviews_mcp, namespace="hv")      # hv.list, hv.get
@@ -182,8 +177,7 @@ pixi run postinstall     # pip install -e . + fastmcp (run after structural chan
 
 1. Choose the right sub-server (or `server/main.py` for core tools)
 2. Add `@mcp.tool()` decorated async function
-3. For guided tools: add codegen function in `codegen/codegen.py` first, then call from `server/guided_mcp.py`
-4. Add tests in `tests/`
+3. Add tests in `tests/`
 
 ## Adding a New Skill
 

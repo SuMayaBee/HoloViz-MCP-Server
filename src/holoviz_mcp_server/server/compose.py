@@ -8,10 +8,7 @@ from holoviz_mcp_server.server.panel_mcp import mcp as panel_mcp
 
 def get_composed_server():
     """Set up and return the composed MCP server with all sub-servers mounted."""
-    from holoviz_mcp_server.server.guided_mcp import mcp as guided_mcp
-
     # Mount sub-servers with namespaces
-    main_mcp.mount(guided_mcp, namespace="viz")
     main_mcp.mount(panel_mcp, namespace="pn")
     main_mcp.mount(hvplot_mcp, namespace="hvplot")
     main_mcp.mount(holoviews_mcp, namespace="hv")
