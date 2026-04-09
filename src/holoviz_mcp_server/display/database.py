@@ -224,6 +224,25 @@ class SnippetDatabase:
             conn.commit()
             return cursor.rowcount > 0
 
+    def list_snippets(self, limit: int = 10) -> list[Snippet]:
+        """Return the most recent snippets, newest first."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM snippets ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_snippet(dict(row)) for row in rows]
+
+    def delete_snippet(self, snippet_id: str) -> bool:
+        """Delete a snippet by ID. Returns True if deleted."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM snippets WHERE id = ?", (snippet_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
     def create_visualization(
         self,
         app: str,

@@ -10,7 +10,7 @@ import types
 
 logger = logging.getLogger(__name__)
 
-_EXECUTION_TIMEOUT = 30
+_EXECUTION_TIMEOUT = 300
 
 
 def execute_in_module(

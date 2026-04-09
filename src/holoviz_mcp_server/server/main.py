@@ -73,7 +73,7 @@ def _start_panel_server() -> tuple[PanelServerManager | None, DisplayClient | No
     if not manager.start():
         logger.error("Failed to start Panel server")
         return None, None
-    client = DisplayClient(base_url=manager.get_base_url())
+    client = DisplayClient(base_url=manager.get_base_url(), timeout=300)
     return manager, client
 
 
@@ -209,7 +209,7 @@ async def _ensure_client(ctx: Context | None = None) -> DisplayClient:
 
     if not _client:
         config = get_config()
-        _lazy_client = DisplayClient(base_url=f"http://{config.host}:{config.port}")
+        _lazy_client = DisplayClient(base_url=f"http://{config.host}:{config.port}", timeout=300)
         if _lazy_client.is_healthy():
             _client = _lazy_client
         else:
@@ -220,7 +220,7 @@ async def _ensure_client(ctx: Context | None = None) -> DisplayClient:
             await ctx.info("Panel server unhealthy, attempting restart...")
         if _manager and _manager.restart():
             _client.close()
-            _client = DisplayClient(base_url=_manager.get_base_url())
+            _client = DisplayClient(base_url=_manager.get_base_url(), timeout=300)
         else:
             raise ToolError("Panel server unhealthy and restart failed.")
 

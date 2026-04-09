@@ -43,6 +43,7 @@ def main(address: str = "localhost", port: int = 5077, show: bool = True) -> Non
 
     from holoviz_mcp_server.display.database import get_db
     from holoviz_mcp_server.display.pages import view_page
+    from holoviz_mcp_server.display.pages.feed_page import feed_page
 
     _ = get_db()
 
@@ -63,7 +64,7 @@ def main(address: str = "localhost", port: int = 5077, show: bool = True) -> Non
         }
     """]
 
-    pages = {"/view": view_page}
+    pages = {"/view": view_page, "/feed": feed_page}
 
     extra_patterns = [
         (r"/api/snippet", SnippetEndpoint),
